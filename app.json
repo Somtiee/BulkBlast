@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "BulkBlast",
+    "slug": "BulkBlast",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo-dark.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/logo-dark.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A",
+        "foregroundImage": "./assets/logo-dark.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-asset",
+      "expo-font",
+      "expo-sharing"
+    ]
+  }
+}
