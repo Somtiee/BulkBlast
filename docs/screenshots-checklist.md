@@ -4,7 +4,6 @@ Capture these specific screens for the dApp Store listing. Ensure the status bar
 
 ## 1. Create / Home Screen
 *   **Context**: The main landing page.
-*   **Focus**: Show the clean "Create Drop" interface, token selection, and "Wallet / Bulk Blast" toggle.
 *   <img width="1080" height="2316" alt="image" src="https://github.com/user-attachments/assets/b8316832-c33f-465e-8946-b7f26423c9ce" />
 <img width="1080" height="2316" alt="image" src="https://github.com/user-attachments/assets/08a8114f-7fa3-4fe7-9d1f-1080d6c4f576" />
 
