@@ -67,3 +67,7 @@ Thumbs.db
 # generated native folders
 /ios
 /android
+
+# Allow APKs in releases folder (override ignore)
+!releases/*.apk
+!releases/*.aab

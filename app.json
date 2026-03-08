@@ -12,9 +12,11 @@
       "backgroundColor": "#0F172A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bulkblast.app"
     },
     "android": {
+      "package": "com.bulkblast.app",
       "adaptiveIcon": {
         "backgroundColor": "#0F172A",
         "foregroundImage": "./assets/logo-dark.png"
@@ -29,6 +31,11 @@
       "expo-asset",
       "expo-font",
       "expo-sharing"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "af907db8-557e-4fcd-bb87-8f56f3d205cd"
+      }
+    }
   }
 }

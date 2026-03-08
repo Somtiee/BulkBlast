@@ -190,7 +190,8 @@ export function SwapModal({ navigation }: Props) {
       const amountFloat = parseFloat(amount);
       if (isNaN(amountFloat) || amountFloat <= 0) return;
       
-      const lamports = Math.round(amountFloat * Math.pow(10, inputToken.decimals || 9));
+      const decimals = inputToken.decimals ?? 9;
+      const lamports = Math.round(amountFloat * Math.pow(10, decimals));
       
       const q = await JupiterSwapService.getQuote({
         inputMint: inputToken.mint,
@@ -198,14 +199,24 @@ export function SwapModal({ navigation }: Props) {
         amountLamports: lamports.toString(),
         slippageBps: slippage,
       });
+      
       setQuote(q);
+      
     } catch (e: any) {
-      console.error(e);
-      setLastError(e.message);
+      console.warn('Quote error', e);
+      setLastError(e.message || 'Failed to get quote');
       setQuote(null);
     } finally {
       setLoading(false);
     }
+  }
+
+  function getOutputAmountUi() {
+    if (!quote) return '0.00';
+    const raw = parseInt(quote.outAmount);
+    // Use outputToken decimals if available, fallback to 6 (typical for SPL like USDC/SKR) or 9 (SOL)
+    const decimals = outputToken.decimals ?? 6; 
+    return (raw / Math.pow(10, decimals)).toFixed(4);
   }
 
   async function onSwap() {
@@ -327,7 +338,7 @@ export function SwapModal({ navigation }: Props) {
                     <ActivityIndicator size="small" color={colors.primary} />
                  ) : quote ? (
                     <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text }}>
-                       {(parseInt(quote.outAmount) / Math.pow(10, outputToken.decimals || 9)).toFixed(4)}
+                       {getOutputAmountUi()}
                     </Text>
                  ) : (
                     <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.textSecondary }}>0.00</Text>

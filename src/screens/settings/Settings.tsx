@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { StyleSheet, View, Text, Switch, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, Text, Switch, Alert, TouchableOpacity } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Clipboard from 'expo-clipboard';
+import Constants from 'expo-constants';
 
 import type { MainTabsParamList } from '../../navigation/types';
-import { Button, Card, Divider } from '../../components/ui';
+import { Button, Card, Divider, Screen } from '../../components/ui';
 import { StickyAppHeader } from '../../components/ui/StickyAppHeader';
 import { spacing, typography, useTheme } from '../../theme';
 import { useApp } from '../../state/context';
@@ -98,15 +99,6 @@ export function Settings({ navigation }: Props) {
       return;
     }
     dispatch({ type: 'settings/toggleSeekerDiscount' });
-    await StorageService.setItem(KEYS.SEEKER_DISCOUNT, (!state.seekerDiscountEnabled).toString());
-  }
-  
-  async function handleNetworkSwitch(val: boolean) {
-    const newNet = val ? 'devnet' : 'mainnet-beta';
-    setNetwork(newNet);
-    setNetworkMode(newNet);
-    await StorageService.setItem(KEYS.NETWORK_MODE, newNet);
-    Alert.alert('Network Changed', `Switched to ${newNet}`);
   }
 
   async function handleExportKey() {
@@ -131,162 +123,208 @@ export function Settings({ navigation }: Props) {
     }
   }
 
-  const isBuiltIn = state.walletMode === 'built_in';
-  const isLocked = state.builtInWalletStatus === 'locked';
-
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    scrollContent: {
-      paddingBottom: spacing[8],
-    },
-    section: {
-      marginTop: spacing[6],
-      paddingHorizontal: spacing[4],
-    },
-    sectionHeader: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textSecondary,
-      marginBottom: spacing[2],
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    group: {
-      backgroundColor: colors.surface2,
-      borderRadius: 12,
-      overflow: 'hidden',
-    },
-    row: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: spacing[4],
-      backgroundColor: colors.surface2,
-    },
-    rowBorder: {
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-    },
-    label: {
-      fontSize: 16,
-      color: colors.text,
-      fontWeight: '500',
-    },
-    value: {
-      fontSize: 14,
-      color: colors.textSecondary,
-    },
-    hint: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        paddingHorizontal: spacing[4],
-        marginTop: spacing[2],
-    },
-    destructiveText: {
-        color: colors.danger,
-    }
-  }), [colors]);
-
-  const SettingRow = ({ label, value, onPress, isLast, children }: any) => (
-    <TouchableOpacity 
-      style={[styles.row, !isLast && styles.rowBorder]} 
-      onPress={onPress}
-      disabled={!onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-    >
-      <Text style={[styles.label, onPress && { color: colors.primary }]}>{label}</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        {value && <Text style={styles.value}>{value}</Text>}
-        {children}
+  // --- Diagnostics Component (Only visible in Dev or by tap combo?) ---
+  // For now, let's just make it a visible section at the bottom since it's harmless metadata
+  // In a real release, you might wrap this in __DEV__ check.
+  const Diagnostics = () => (
+    <View style={styles.diagnosticsContainer}>
+      <Text style={[styles.diagnosticsHeader, { color: colors.textSecondary }]}>Diagnostics</Text>
+      
+      <View style={styles.diagRow}>
+        <Text style={[styles.diagLabel, { color: colors.text }]}>Network:</Text>
+        <Text style={[styles.diagValue, { color: colors.primary }]}>{networkMode}</Text>
       </View>
-    </TouchableOpacity>
+      
+      <View style={styles.diagRow}>
+        <Text style={[styles.diagLabel, { color: colors.text }]}>Wallet Mode:</Text>
+        <Text style={[styles.diagValue, { color: colors.text }]}>{state.walletMode || 'None'}</Text>
+      </View>
+
+      <View style={styles.diagRow}>
+        <Text style={[styles.diagLabel, { color: colors.text }]}>Jupiter Key:</Text>
+        <Text style={[styles.diagValue, { color: hasJupiterApiKey() ? colors.success : colors.error }]}>
+          {hasJupiterApiKey() ? 'Present' : 'Missing'}
+        </Text>
+      </View>
+
+      <View style={styles.diagRow}>
+        <Text style={[styles.diagLabel, { color: colors.text }]}>Helius Key:</Text>
+        <Text style={[styles.diagValue, { color: hasHeliusKey() ? colors.success : colors.error }]}>
+          {hasHeliusKey() ? 'Present' : 'Missing'}
+        </Text>
+      </View>
+      
+      <Text style={[styles.diagFooter, { color: colors.textSecondary }]}>
+        Version: {Constants.expoConfig?.version || '1.0.0'}
+      </Text>
+    </View>
   );
 
   return (
-    <View style={styles.container}>
-      <StickyAppHeader title="Settings" showLogo={false} />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <Screen contentStyle={styles.scrollContent}>
+      <StickyAppHeader title="Settings" />
+      
+      {/* Appearance & Extras */}
+      <Card style={styles.section}>
+         <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
+         <Divider style={styles.divider} />
+
+         <View style={styles.settingRow}>
+            <Text style={{ color: colors.text, flex: 1 }}>Dark Mode</Text>
+            <Switch 
+              value={isDark} 
+              onValueChange={() => setMode(isDark ? 'light' : 'dark')}
+            />
+         </View>
+         
+         <View style={[styles.settingRow, { marginTop: spacing[4] }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text }}>Seeker Discount</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 10 }}>Requires Saga/Solana Mobile</Text>
+            </View>
+            <Switch 
+              value={state.seekerDiscountEnabled} 
+              onValueChange={toggleSeekerDiscount}
+              disabled={!state.solanaMobileOwner}
+            />
+         </View>
+      </Card>
+
+      {/* Network Section */}
+      <Card style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Network</Text>
+        <Divider style={styles.divider} />
         
-        {/* Appearance */}
-        <View style={styles.section}>
-            <Text style={styles.sectionHeader}>Appearance</Text>
-            <View style={styles.group}>
-                <View style={styles.row}>
-                    <Text style={styles.label}>Dark Mode</Text>
-                    <Switch 
-                        value={isDark} 
-                        onValueChange={(val) => setMode(val ? 'dark' : 'light')} 
-                        trackColor={{ false: colors.border, true: colors.primary }}
-                    />
-                </View>
-            </View>
+        <View style={styles.settingRow}>
+          <Text style={{ color: colors.text, flex: 1 }}>Use Mainnet (Real Money)</Text>
+          <Switch 
+            value={networkMode === 'mainnet-beta'} 
+            onValueChange={(val) => {
+               const next = val ? 'mainnet-beta' : 'devnet';
+               setNetworkMode(next);
+               setNetwork(next);
+               StorageService.setItem(KEYS.NETWORK_MODE, next);
+               dispatch({ type: 'settings/setNetwork', network: next });
+               Alert.alert('Network Changed', `Switched to ${next}. Please reload/refresh assets.`);
+            }}
+          />
         </View>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
+           Current: {networkMode}
+        </Text>
+      </Card>
 
-        {/* Network */}
-        <View style={styles.section}>
-            <Text style={styles.sectionHeader}>Network</Text>
-            <View style={styles.group}>
-                <View style={styles.row}>
-                    <Text style={styles.label}>Developer Mode (Devnet)</Text>
-                    <Switch 
-                        value={networkMode === 'devnet'} 
-                        onValueChange={handleNetworkSwitch} 
-                        trackColor={{ false: colors.border, true: colors.primary }}
-                    />
-                </View>
-            </View>
-            <Text style={styles.hint}>Current Endpoint: {networkMode}</Text>
+      {/* Wallet Management Section */}
+      <Card style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Wallet</Text>
+        <Divider style={styles.divider} />
+        
+        {!state.walletPublicKey ? (
+           <Text style={{ color: colors.textSecondary, marginBottom: spacing[4] }}>No wallet connected.</Text>
+        ) : (
+           <View style={{ marginBottom: spacing[4] }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Public Key:</Text>
+              <TouchableOpacity onPress={() => {
+                  Clipboard.setStringAsync(state.walletPublicKey || '');
+                  Alert.alert('Copied', 'Address copied to clipboard');
+              }}>
+                <Text style={{ color: colors.primary, fontSize: 13 }} numberOfLines={1} ellipsizeMode="middle">
+                  {state.walletPublicKey}
+                </Text>
+              </TouchableOpacity>
+           </View>
+        )}
+
+        <View style={styles.row}>
+          {hasStored ? (
+             state.builtInWalletStatus === 'locked' ? (
+               <Button title="Unlock Wallet" onPress={handleUnlock} loading={loading} style={styles.actionBtn} />
+             ) : (
+               <>
+                 <Button title="Lock Wallet" onPress={handleLock} loading={loading} variant="secondary" style={styles.actionBtn} />
+                 <Button title="Export Key" onPress={handleExportKey} variant="secondary" style={styles.actionBtn} />
+               </>
+             )
+          ) : (
+             <Text style={{ color: colors.textSecondary }}>No built-in wallet found.</Text>
+          )}
+          
+          {hasStored && (
+             <Button 
+               title="Wipe" 
+               onPress={handleWipe} 
+               variant="danger" // Changed from 'destructive' (which doesn't exist in ButtonVariant) to 'danger'
+               style={[styles.actionBtn, { backgroundColor: colors.danger, borderColor: colors.danger }]} 
+               textStyle={{ color: 'white' }}
+             />
+          )}
         </View>
+      </Card>
 
-        {/* Integrations */}
-        <View style={styles.section}>
-            <Text style={styles.sectionHeader}>Integrations</Text>
-            <View style={styles.group}>
-                <SettingRow label="Jupiter Aggregator" value={hasJupiterApiKey() ? 'Active' : 'Missing Key'} />
-                <SettingRow label="Helius RPC" value={hasHeliusKey() ? 'Active' : 'Missing Key'} isLast />
-            </View>
-        </View>
+      {/* Diagnostics Section */}
+      <Diagnostics />
 
-        {/* Wallet Management */}
-        <View style={styles.section}>
-            <Text style={styles.sectionHeader}>Wallet Management</Text>
-            <View style={styles.group}>
-                <SettingRow label="Type" value={isBuiltIn ? 'Built-in' : 'External'} />
-                {state.walletPublicKey && (
-                    <SettingRow label="Address" value={state.walletPublicKey.slice(0, 4) + '...' + state.walletPublicKey.slice(-4)} onPress={() => Clipboard.setStringAsync(state.walletPublicKey!)} />
-                )}
-                
-                {(isBuiltIn || hasStored) && (
-                    <>
-                        <SettingRow 
-                           label={isLocked ? "Unlock Wallet" : "Lock Wallet"} 
-                           onPress={isLocked ? handleUnlock : handleLock}
-                        />
-                        
-                        {!isLocked && (
-                             <SettingRow 
-                                label="Export Private Key" 
-                                onPress={handleExportKey}
-                             />
-                        )}
-
-                        <SettingRow 
-                           label="Wipe Wallet Data" 
-                           onPress={handleWipe}
-                           isLast
-                        >
-                            <Text style={{ color: colors.danger }}>⚠️</Text>
-                        </SettingRow>
-                    </>
-                )}
-            </View>
-        </View>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </View>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  scrollContent: {
+    padding: spacing[4],
+    paddingBottom: 40,
+  },
+  section: {
+    marginBottom: spacing[6],
+    padding: spacing[4],
+  },
+  sectionTitle: {
+    fontSize: typography.fontSize.title,
+    fontWeight: typography.weight.bold,
+    marginBottom: spacing[2],
+  },
+  divider: {
+    marginBottom: spacing[4],
+  },
+  row: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    flexWrap: 'wrap',
+  },
+  actionBtn: {
+    flex: 1,
+    minWidth: 100,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  diagnosticsContainer: {
+    marginTop: spacing.xl,
+    padding: spacing[4],
+    opacity: 0.8,
+  },
+  diagnosticsHeader: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: spacing[2],
+    textTransform: 'uppercase',
+  },
+  diagRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  diagLabel: {
+    fontSize: 12,
+  },
+  diagValue: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  diagFooter: {
+    marginTop: spacing[4],
+    fontSize: 10,
+    textAlign: 'center',
+  },
+});

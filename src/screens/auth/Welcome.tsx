@@ -53,7 +53,7 @@ export function Welcome({ navigation }: Props) {
     <Screen>
       <View style={styles.header}>
         <Image source={logoSource} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.subtitle}>Professional, minimalist airdrop toolkit</Text>
+        <Text style={styles.subtitle}>Professional, Bulk transaction/airdrop tool</Text>
       </View>
       
       <Card>

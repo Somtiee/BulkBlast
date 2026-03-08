@@ -24,14 +24,6 @@ export function AppBootSplash({ onDismiss, visible }: Props) {
 
   useEffect(() => {
     if (visible) {
-      // Sequence:
-      // 1. Fade in Logo 1
-      // 2. Wait
-      // 3. Fade out Logo 1
-      // 4. Fade in Logo 2
-      // 5. Wait
-      // 6. Dismiss
-      
       Animated.sequence([
         // Step 1: Fade in first logo
         Animated.timing(fadeAnim1, {
@@ -66,12 +58,12 @@ export function AppBootSplash({ onDismiss, visible }: Props) {
          onDismiss();
       });
     }
-  }, [visible, fadeAnim1, fadeAnim2, onDismiss]);
+  }, [visible]); // Removed fadeAnim1, fadeAnim2, onDismiss from dependency array to prevent re-triggering loop if props change
 
   if (!visible) return null;
 
   return (
-    <View style={[styles.container, { backgroundColor, zIndex: 9999 }]}>
+    <View style={[styles.container, { backgroundColor, zIndex: 9999, elevation: 9999 }]}>
        {/* Logo 1 */}
        <Animated.View style={[styles.logoContainer, { opacity: fadeAnim1 }]}>
           <Image source={logo1} style={styles.logo} resizeMode="contain" />
