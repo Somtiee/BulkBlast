@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BulkBlast - Solana Bulk Transactions & Airdrops</title>
+    <meta name="description" content="The fastest mobile tool for Solana airdrops, giveaways, and bulk transfers. Send SOL, SPL tokens, and NFTs to multiple recipients instantly.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="index.html" class="logo">
+                <img src="assets/logo.png" alt="BulkBlast Logo" class="logo-img">
+                <span class="logo-text">BulkBlast</span>
+            </a>
+            <div class="nav-links">
+                <a href="docs/index.html" class="nav-link">Docs</a>
+                <a href="https://x.com/Bulkblast_app" target="_blank" rel="noopener noreferrer" class="nav-link icon-link">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+                </a>
+                <button class="btn btn-primary nav-cta" id="nav-launch-btn">Launch App</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-content">
+            <h1 class="hero-headline fade-up">BulkBlast — Send Tokens & NFTs to Hundreds of Wallets Instantly</h1>
+            <p class="hero-subheadline fade-up delay-1">The fastest mobile tool for Solana airdrops, giveaways, and bulk transfers.</p>
+            <div class="hero-actions fade-up delay-2">
+                <button class="btn btn-primary btn-large" id="hero-launch-btn">Launch App</button>
+                <a href="docs/index.html" class="btn btn-secondary">View Docs</a>
+            </div>
+        </div>
+        <div class="hero-background-glow"></div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title fade-up">Built for Solana Power Users</h2>
+            <div class="features-grid">
+                <div class="feature-card fade-up">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Bulk Transactions</h3>
+                    <p>Send SOL, tokens, or NFTs to hundreds of wallets instantly with just a few taps.</p>
+                </div>
+                <div class="feature-card fade-up delay-1">
+                    <div class="feature-icon">📱</div>
+                    <h3>Mobile-first Workflow</h3>
+                    <p>Import recipients from CSV directly on your phone. Designed for on-the-go management.</p>
+                </div>
+                <div class="feature-card fade-up delay-2">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Built-in Safety</h3>
+                    <p>Simulations, spend caps, and confirmation safeguards to ensure secure transfers.</p>
+                </div>
+                <div class="feature-card fade-up delay-3">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Jupiter Swap Integration</h3>
+                    <p>Convert SOL to the required fee token instantly inside the app.</p>
+                </div>
+                <div class="feature-card fade-up delay-4">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Seeker Integration</h3>
+                    <p>50% discount to Solana Mobile users.</p>
+                </div>
+                <div class="feature-card fade-up delay-5">
+                    <div class="feature-icon">🌊</div>
+                    <h3>DFLOW Integration <span class="badge-coming-soon">Coming Soon</span></h3>
+                    <p>Convert SOL to Seeker for fees in the app</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2 class="section-title fade-up">How It Works</h2>
+            <div class="steps-container">
+                <div class="step fade-up">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Import wallet list</h3>
+                        <p>Upload a CSV or paste/scan addresses manually.</p>
+                    </div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step fade-up delay-1">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Choose asset</h3>
+                        <p>Select SOL, SPL token, or NFT.</p>
+                    </div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step fade-up delay-2">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Send instantly</h3>
+                        <p>Confirm and blast transactions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Solana Mobile Section -->
+    <section class="solana-mobile">
+        <div class="container solana-mobile-content fade-up">
+            <h2 class="section-title">Designed for Solana Mobile</h2>
+            <p>BulkBlast integrates with the Solana Mobile Stack and is optimized for Android crypto users managing communities on the go.</p>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-box fade-up">
+                <h2>Start blasting transactions in seconds.</h2>
+                <button class="btn btn-primary btn-large" id="footer-launch-btn">Download Android App</button>
+                <p class="small-text">Android only.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <div class="footer-brand">
+                <span class="logo-text">BulkBlast</span>
+            </div>
+            <div class="footer-links">
+                <a href="docs/index.html">Docs</a>
+                <a href="https://x.com/Bulkblast_app" target="_blank" rel="noopener noreferrer">Twitter</a>
+                <a href="#" class="placeholder-link">GitHub</a>
+            </div>
+        </div>
+        <div class="container footer-bottom">
+            <p>&copy; 2026 BulkBlast. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="download-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <h3>Download BulkBlast</h3>
+            <p>BulkBlast is available on Android. Download the APK to start using it.</p>
+            <div class="modal-actions">
+                <a href="https://github.com/Somtiee/BulkBlast/releases/latest/download/bulkblast.apk" class="btn btn-primary">Download APK</a>
+                <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

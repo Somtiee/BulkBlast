@@ -68,6 +68,9 @@ Thumbs.db
 /ios
 /android
 
+# Website build artifacts / large binaries
+/website/assets/*.apk
+
 # Allow APKs in releases folder (override ignore)
 !releases/*.apk
 !releases/*.aab
