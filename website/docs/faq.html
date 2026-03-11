@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ - BulkBlast Docs</title>
+    <meta name="description" content="Frequently asked questions about BulkBlast, fees, safety, and supported assets.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="docs-layout">
+
+    <header class="docs-header">
+        <a href="../index.html" class="logo-link">
+            <img src="assets/logo.png" alt="BulkBlast Logo" class="logo-img">
+            <span>BulkBlast Docs</span>
+        </a>
+        <div class="header-actions">
+            <a href="https://github.com/Somtiee/Bulkblast" target="_blank" class="header-link">GitHub</a>
+            <a href="https://x.com/Bulkblast_app" target="_blank" class="header-link">Twitter</a>
+            <button class="mobile-menu-toggle">☰</button>
+        </div>
+    </header>
+
+    <nav class="docs-sidebar">
+        <div class="sidebar-group">
+            <div class="sidebar-title">Introduction</div>
+            <a href="index.html" class="sidebar-link">Overview</a>
+            <a href="getting-started.html" class="sidebar-link">Getting Started</a>
+            <a href="how-it-works.html" class="sidebar-link">How It Works</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Features</div>
+            <a href="fees-and-payments.html" class="sidebar-link">Fees & Payments</a>
+            <a href="swaps.html" class="sidebar-link">Swaps (Jupiter)</a>
+            <a href="nft-support.html" class="sidebar-link">NFT Support</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Resources</div>
+            <a href="roadmap.html" class="sidebar-link">Roadmap</a>
+            <a href="faq.html" class="sidebar-link active">FAQ</a>
+        </div>
+    </nav>
+
+    <main class="docs-content">
+        <h1>Frequently Asked Questions</h1>
+        <p class="subtitle">Common questions about BulkBlast functionality, safety, and fees.</p>
+
+        <details class="faq-item">
+            <summary>What assets can I send with BulkBlast?</summary>
+            <div class="faq-content">
+                <p>BulkBlast supports the native Solana token (SOL), all standard SPL tokens (like USDC, BONK, WIF), and Metaplex standard NFTs.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>Is BulkBlast mobile-only?</summary>
+            <div class="faq-content">
+                <p>Yes, BulkBlast is designed as a mobile-first application specifically for Android. We believe the future of crypto adoption lies in powerful mobile tools. An iOS version is planned for the future.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>What networks are supported?</summary>
+            <div class="faq-content">
+                <p>BulkBlast supports both Solana Mainnet-Beta (for real transactions) and Devnet (for testing). You can switch networks easily in the Settings tab.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>Why do fees use SKR?</summary>
+            <div class="faq-content">
+                <p>Using SEEKER (SKR) allows us to align with the Solana Mobile ecosystem and offer native discounts to mobile users. It simplifies fee processing and supports the community.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>How does the Solana Mobile discount work?</summary>
+            <div class="faq-content">
+                <p>If you are using a Solana Mobile device (Saga or Seeker), the app automatically detects this and applies a <strong>50% discount</strong> to all BulkBlast service fees.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>Is BulkBlast safe to use?</summary>
+            <div class="faq-content">
+                <p>Yes. BulkBlast is a non-custodial tool, meaning we never have access to your private keys or funds. All transactions are simulated before signing to ensure safety. We recommend testing on Devnet first if you are unsure.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>Are swaps done inside the app?</summary>
+            <div class="faq-content">
+                <p>Yes, BulkBlast integrates Jupiter Aggregator directly, allowing you to swap assets without leaving the app. This is perfect for quickly acquiring SKR for fees.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>Is documentation still evolving?</summary>
+            <div class="faq-content">
+                <p>Yes, as BulkBlast adds new features (like improved NFT support, new routing partners, etc.), this documentation will be updated. Check back often for the latest guides.</p>
+            </div>
+        </details>
+
+        <div class="callout callout-info">
+            <h4>Still have questions?</h4>
+            <p>Reach out to us on <a href="https://x.com/Bulkblast_app" target="_blank">Twitter</a> or open an issue on GitHub.</p>
+        </div>
+
+    </main>
+
+    <!-- Download CTA Strip -->
+    <div class="download-cta-strip">
+        <div class="download-cta-content">
+            <div class="download-cta-text">
+                <span class="download-cta-title">Start using BulkBlast today</span>
+                <span class="download-cta-subtitle">Available for Android only</span>
+            </div>
+            <a href="https://github.com/Somtiee/BulkBlast/raw/refs/heads/main/releases/BULKBLAST%20APK%20FILE.apk" class="download-cta-btn">Download APK</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

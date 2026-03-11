@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fees & Payments - BulkBlast Docs</title>
+    <meta name="description" content="Transparent fee structure for BulkBlast, including SKR token payments and Solana Mobile discounts.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="docs-layout">
+
+    <header class="docs-header">
+        <a href="../index.html" class="logo-link">
+            <img src="assets/logo.png" alt="BulkBlast Logo" class="logo-img">
+            <span>BulkBlast Docs</span>
+        </a>
+        <div class="header-actions">
+            <a href="https://github.com/Somtiee/Bulkblast" target="_blank" class="header-link">GitHub</a>
+            <a href="https://x.com/Bulkblast_app" target="_blank" class="header-link">Twitter</a>
+            <button class="mobile-menu-toggle">☰</button>
+        </div>
+    </header>
+
+    <nav class="docs-sidebar">
+        <div class="sidebar-group">
+            <div class="sidebar-title">Introduction</div>
+            <a href="index.html" class="sidebar-link">Overview</a>
+            <a href="getting-started.html" class="sidebar-link">Getting Started</a>
+            <a href="how-it-works.html" class="sidebar-link">How It Works</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Features</div>
+            <a href="fees-and-payments.html" class="sidebar-link active">Fees & Payments</a>
+            <a href="swaps.html" class="sidebar-link">Swaps (Jupiter)</a>
+            <a href="nft-support.html" class="sidebar-link">NFT Support</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Resources</div>
+            <a href="roadmap.html" class="sidebar-link">Roadmap</a>
+            <a href="faq.html" class="sidebar-link">FAQ</a>
+        </div>
+    </nav>
+
+    <main class="docs-content">
+        <h1>Fees & Payments</h1>
+        <p class="subtitle">Understand BulkBlast's transparent fee structure, powered by SEEKER (SKR) tokens.</p>
+
+        <div class="callout callout-info">
+            <h4>Solana Mobile Discount</h4>
+            <p><strong>Exclusive Benefit:</strong> Solana Mobile (Saga / Seeker) users automatically receive a <strong>50% discount</strong> on all BulkBlast fees.</p>
+        </div>
+
+        <h2 id="fee-structure">Fee Tiers</h2>
+        <p>BulkBlast charges a small service fee to support ongoing development and infrastructure. Fees are calculated based on the number of recipients in your bulk transaction.</p>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Recipients</th>
+                        <th>Fee (in SKR)</th>
+                        <th>Solana Mobile Fee</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1 - 49</td>
+                        <td>$0.50 equivalent</td>
+                        <td><strong>$0.25 equivalent</strong></td>
+                    </tr>
+                    <tr>
+                        <td>50 - 499</td>
+                        <td>$1.00 equivalent</td>
+                        <td><strong>$0.50 equivalent</strong></td>
+                    </tr>
+                    <tr>
+                        <td>500+</td>
+                        <td>$2.00 equivalent</td>
+                        <td><strong>$1.00 equivalent</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p><em>*Fees are payable in SEEKER (SKR) tokens. The USD equivalent is calculated at the time of transaction.</em></p>
+
+        <h2 id="why-skr">Why SEEKER (SKR)?</h2>
+        <p>BulkBlast utilizes the SEEKER (SKR) token for fee payments to align with the Solana Mobile ecosystem. This allows us to:</p>
+        <ul>
+            <li>Offer native discounts to mobile users.</li>
+            <li>Streamline fee processing.</li>
+            <li>Support the broader Solana community.</li>
+        </ul>
+
+        <h2 id="treasury">Treasury & Transparency</h2>
+        <p>All collected fees are routed directly to the BulkBlast treasury wallet. These funds are used strictly for:</p>
+        <ul>
+            <li>Product development (new features, iOS support).</li>
+            <li>Infrastructure costs (RPC nodes, hosting).</li>
+            <li>Community initiatives and ecosystem growth.</li>
+        </ul>
+        <p>We believe in full transparency. You will always see the exact fee amount before confirming any transaction.</p>
+
+        <div class="callout callout-warning">
+            <h4>Devnet Fees</h4>
+            <p>On Devnet, fees may be waived or use "fake" SKR for testing purposes. Always verify the fee amount on the confirmation screen.</p>
+        </div>
+
+        <h2>Need SKR for fees?</h2>
+        <p>You can swap SOL for SKR instantly inside the app.</p>
+        <p><a href="swaps.html">Learn about In-App Swaps &rarr;</a></p>
+
+    </main>
+
+    <!-- Download CTA Strip -->
+    <div class="download-cta-strip">
+        <div class="download-cta-content">
+            <div class="download-cta-text">
+                <span class="download-cta-title">Start using BulkBlast today</span>
+                <span class="download-cta-subtitle">Available for Android only</span>
+            </div>
+            <a href="https://github.com/Somtiee/BulkBlast/raw/refs/heads/main/releases/BULKBLAST%20APK%20FILE.apk" class="download-cta-btn">Download APK</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

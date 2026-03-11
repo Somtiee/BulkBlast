@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How It Works - BulkBlast Docs</title>
+    <meta name="description" content="Step-by-step guide to sending bulk transactions, NFTs, and airdrops using BulkBlast on Android.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="docs-layout">
+
+    <header class="docs-header">
+        <a href="../index.html" class="logo-link">
+            <img src="assets/logo.png" alt="BulkBlast Logo" class="logo-img">
+            <span>BulkBlast Docs</span>
+        </a>
+        <div class="header-actions">
+            <a href="https://github.com/Somtiee/Bulkblast" target="_blank" class="header-link">GitHub</a>
+            <a href="https://x.com/Bulkblast_app" target="_blank" class="header-link">Twitter</a>
+            <button class="mobile-menu-toggle">☰</button>
+        </div>
+    </header>
+
+    <nav class="docs-sidebar">
+        <div class="sidebar-group">
+            <div class="sidebar-title">Introduction</div>
+            <a href="index.html" class="sidebar-link">Overview</a>
+            <a href="getting-started.html" class="sidebar-link">Getting Started</a>
+            <a href="how-it-works.html" class="sidebar-link active">How It Works</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Features</div>
+            <a href="fees-and-payments.html" class="sidebar-link">Fees & Payments</a>
+            <a href="swaps.html" class="sidebar-link">Swaps (Jupiter)</a>
+            <a href="nft-support.html" class="sidebar-link">NFT Support</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Resources</div>
+            <a href="roadmap.html" class="sidebar-link">Roadmap</a>
+            <a href="faq.html" class="sidebar-link">FAQ</a>
+        </div>
+    </nav>
+
+    <main class="docs-content">
+        <h1>How It Works</h1>
+        <p class="subtitle">A step-by-step guide to executing bulk transactions, airdrops, and asset distributions with BulkBlast.</p>
+
+        <h2 id="step-1">Step 1: Add Recipients</h2>
+        <p>Start by selecting the wallet addresses you want to send assets to. BulkBlast provides several ways to import recipients:</p>
+        
+        <div class="card-grid">
+            <div class="docs-card">
+                <h3>CSV Import</h3>
+                <p>Import a CSV file containing wallet addresses directly from your phone's storage.</p>
+            </div>
+            <div class="docs-card">
+                <h3>Manual Entry</h3>
+                <p>Type or paste individual wallet addresses one by one.</p>
+            </div>
+            <div class="docs-card">
+                <h3>Scan QR Code</h3>
+                <p>Use your phone's camera to scan a wallet address QR code.</p>
+            </div>
+            <div class="docs-card">
+                <h3>Random Selection</h3>
+                <p>For giveaways, randomly select winners from a list.</p>
+            </div>
+        </div>
+
+        <h2 id="step-2">Step 2: Choose Asset</h2>
+        <p>After adding recipients, select the asset you want to distribute. BulkBlast supports:</p>
+        <ul>
+            <li><strong>SOL:</strong> The native token of the Solana blockchain.</li>
+            <li><strong>SPL Tokens:</strong> Any standard Solana token (USDC, BONK, WIF, custom tokens).</li>
+            <li><strong>NFTs:</strong> Select one or more NFTs to send to individual recipients.</li>
+        </ul>
+
+        <div class="callout callout-info">
+            <h4>Token Selection</h4>
+            <p>If you don't see your token, ensure you have a balance in your wallet. Custom token mint addresses can also be pasted directly.</p>
+        </div>
+
+        <h2 id="step-3">Step 3: Set Amount</h2>
+        <p>Define how much each recipient receives:</p>
+        <ul>
+            <li><strong>Equal Amount:</strong> Send the same amount (e.g., 1 SOL) to every wallet.</li>
+            <li><strong>Specific Amounts:</strong> Specify different amounts for each recipient (supported via CSV import).</li>
+            <li><strong>NFT Quantities:</strong> Must be whole numbers (1, 2, etc.).</li>
+        </ul>
+
+        <h2 id="step-4">Step 4: Review & Simulate</h2>
+        <p>Before any transaction is signed, BulkBlast performs a safety check:</p>
+        <ul>
+            <li><strong>Simulation:</strong> Simulates the transaction on the blockchain to ensure it will succeed.</li>
+            <li><strong>Spend Caps:</strong> Checks if the total amount exceeds your set limits.</li>
+            <li><strong>Fee Calculation:</strong> Shows the network fee and any BulkBlast service fee upfront.</li>
+            <li><strong>Balance Check:</strong> Verifies you have enough funds to cover the transfer + fees.</li>
+        </ul>
+
+        <h2 id="step-5">Step 5: Send</h2>
+        <p>Confirm the transaction to start the "blast."</p>
+        <ul>
+            <li><strong>Batching:</strong> Transactions are sent in efficient batches to optimize speed and cost.</li>
+            <li><strong>Progress UI:</strong> Watch the progress bar as transactions confirm on-chain.</li>
+            <li><strong>Retry:</strong> If any transaction fails (e.g., due to network congestion), you can retry <em>only</em> the failed ones.</li>
+        </ul>
+
+        <h2 id="history">History & Receipts</h2>
+        <p>Once completed, the transaction is saved to your <strong>History</strong> tab. You can view details, see the transaction signature, and export a receipt for your records.</p>
+
+        <h2>Ready to blast?</h2>
+        <p><a href="fees-and-payments.html">Learn about Fees & Payments &rarr;</a></p>
+
+    </main>
+
+    <!-- Download CTA Strip -->
+    <div class="download-cta-strip">
+        <div class="download-cta-content">
+            <div class="download-cta-text">
+                <span class="download-cta-title">Start using BulkBlast today</span>
+                <span class="download-cta-subtitle">Available for Android only</span>
+            </div>
+            <a href="https://github.com/Somtiee/BulkBlast/raw/refs/heads/main/releases/BULKBLAST%20APK%20FILE.apk" class="download-cta-btn">Download APK</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

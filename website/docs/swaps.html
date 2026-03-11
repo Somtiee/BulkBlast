@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swaps (Jupiter) - BulkBlast Docs</title>
+    <meta name="description" content="In-app swaps powered by Jupiter allow users to convert SOL to SEEKER (SKR) for fees instantly.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="docs-layout">
+
+    <header class="docs-header">
+        <a href="../index.html" class="logo-link">
+            <img src="assets/logo.png" alt="BulkBlast Logo" class="logo-img">
+            <span>BulkBlast Docs</span>
+        </a>
+        <div class="header-actions">
+            <a href="https://github.com/Somtiee/Bulkblast" target="_blank" class="header-link">GitHub</a>
+            <a href="https://x.com/Bulkblast_app" target="_blank" class="header-link">Twitter</a>
+            <button class="mobile-menu-toggle">☰</button>
+        </div>
+    </header>
+
+    <nav class="docs-sidebar">
+        <div class="sidebar-group">
+            <div class="sidebar-title">Introduction</div>
+            <a href="index.html" class="sidebar-link">Overview</a>
+            <a href="getting-started.html" class="sidebar-link">Getting Started</a>
+            <a href="how-it-works.html" class="sidebar-link">How It Works</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Features</div>
+            <a href="fees-and-payments.html" class="sidebar-link">Fees & Payments</a>
+            <a href="swaps.html" class="sidebar-link active">Swaps (Jupiter)</a>
+            <a href="nft-support.html" class="sidebar-link">NFT Support</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Resources</div>
+            <a href="roadmap.html" class="sidebar-link">Roadmap</a>
+            <a href="faq.html" class="sidebar-link">FAQ</a>
+        </div>
+    </nav>
+
+    <main class="docs-content">
+        <h1>Swaps (Jupiter)</h1>
+        <p class="subtitle">Convert assets instantly without leaving the app, powered by Jupiter Aggregator.</p>
+
+        <h2 id="why-swaps">Why In-App Swaps?</h2>
+        <p>BulkBlast integrates Jupiter, Solana's leading swap aggregator, directly into the mobile experience. This allows users to:</p>
+        <ul>
+            <li><strong>Pay Fees Instantly:</strong> Convert SOL to SEEKER (SKR) for transaction fees without needing an external exchange.</li>
+            <li><strong>Reduce Friction:</strong> Complete your entire bulk send workflow within a single app.</li>
+            <li><strong>Best Execution:</strong> Get the best rates across all Solana DEXs.</li>
+        </ul>
+
+        <h2 id="how-to-swap">How to Swap</h2>
+        <ol class="step-list">
+            <li><span class="step-title">Navigate to Swap</span> Tap the <strong>Swap</strong> icon in the bottom navigation bar.</li>
+            <li><span class="step-title">Select Assets</span> Choose the token you want to sell (e.g., SOL) and the token you want to buy (e.g., SKR).</li>
+            <li><span class="step-title">Enter Amount</span> Input the amount you wish to swap.</li>
+            <li><span class="step-title">Review Quote</span> Jupiter will find the best route. Review the rate, slippage, and fees.</li>
+            <li><span class="step-title">Confirm</span> Swipe to confirm the swap. The assets will be available in your wallet instantly.</li>
+        </ol>
+
+        <h2 id="future-integrations">Future Integrations</h2>
+        <p>While Jupiter powers our current swap infrastructure, BulkBlast is actively exploring additional routing partners to ensure redundancy and optimal performance:</p>
+        <ul>
+            <li><strong>dFlow:</strong> Advanced order flow routing for potentially better execution.</li>
+            <li><strong>Additional Aggregators:</strong> Expanding our DEX support for niche tokens.</li>
+        </ul>
+        <p>These integrations are part of our roadmap to make BulkBlast the most robust mobile transaction tool on Solana.</p>
+
+        <div class="callout callout-info">
+            <h4>Safety First</h4>
+            <p>All swaps are executed on-chain via Jupiter's secure smart contracts. BulkBlast does not hold or custody your assets during the swap process.</p>
+        </div>
+
+    </main>
+
+    <!-- Download CTA Strip -->
+    <div class="download-cta-strip">
+        <div class="download-cta-content">
+            <div class="download-cta-text">
+                <span class="download-cta-title">Start using BulkBlast today</span>
+                <span class="download-cta-subtitle">Available for Android only</span>
+            </div>
+            <a href="https://github.com/Somtiee/BulkBlast/raw/refs/heads/main/releases/BULKBLAST%20APK%20FILE.apk" class="download-cta-btn">Download APK</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

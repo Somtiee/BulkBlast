@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFT Support - BulkBlast Docs</title>
+    <meta name="description" content="Send NFTs and collectibles in bulk on Solana with BulkBlast.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="docs-layout">
+
+    <header class="docs-header">
+        <a href="../index.html" class="logo-link">
+            <img src="assets/logo.png" alt="BulkBlast Logo" class="logo-img">
+            <span>BulkBlast Docs</span>
+        </a>
+        <div class="header-actions">
+            <a href="https://github.com/Somtiee/Bulkblast" target="_blank" class="header-link">GitHub</a>
+            <a href="https://x.com/Bulkblast_app" target="_blank" class="header-link">Twitter</a>
+            <button class="mobile-menu-toggle">☰</button>
+        </div>
+    </header>
+
+    <nav class="docs-sidebar">
+        <div class="sidebar-group">
+            <div class="sidebar-title">Introduction</div>
+            <a href="index.html" class="sidebar-link">Overview</a>
+            <a href="getting-started.html" class="sidebar-link">Getting Started</a>
+            <a href="how-it-works.html" class="sidebar-link">How It Works</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Features</div>
+            <a href="fees-and-payments.html" class="sidebar-link">Fees & Payments</a>
+            <a href="swaps.html" class="sidebar-link">Swaps (Jupiter)</a>
+            <a href="nft-support.html" class="sidebar-link active">NFT Support</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Resources</div>
+            <a href="roadmap.html" class="sidebar-link">Roadmap</a>
+            <a href="faq.html" class="sidebar-link">FAQ</a>
+        </div>
+    </nav>
+
+    <main class="docs-content">
+        <h1>NFT Support</h1>
+        <p class="subtitle">Bulk send digital collectibles, whitelists, and rewards with full NFT support on Solana.</p>
+
+        <h2 id="nft-sending">Sending NFTs</h2>
+        <p>BulkBlast isn't just for tokens. We provide a seamless workflow for distributing NFTs to multiple recipients.</p>
+        
+        <p>Supported Assets:</p>
+        <ul>
+            <li><strong>Metaplex Standard NFTs:</strong> The most common NFT type on Solana.</li>
+            <li><strong>Digital Collectibles:</strong> Game items, art, memberships.</li>
+            <li><strong>Compressed NFTs (cNFTs):</strong> <em>(Planned for future updates)</em></li>
+        </ul>
+
+        <div class="callout callout-warning">
+            <h4>Whole Numbers Only</h4>
+            <p>Unlike fungible tokens (like SOL or USDC), NFTs are non-fungible. You can only send whole numbers (e.g., 1 NFT, 5 NFTs). Decimals are not supported.</p>
+        </div>
+
+        <h2 id="collections">Grouped Collections</h2>
+        <p>BulkBlast automatically groups your NFTs by collection, making it easy to:</p>
+        <ul>
+            <li>Select multiple items from the same series.</li>
+            <li>Distribute rewards to specific holders.</li>
+            <li>manage large inventories efficiently.</li>
+        </ul>
+
+        <h2 id="safety">Safety Checks</h2>
+        <p>Sending NFTs requires extra care. BulkBlast includes specific safeguards:</p>
+        <ul>
+            <li><strong>Collection Verification:</strong> Ensures you are sending the correct assets.</li>
+            <li><strong>Fail-Closed Logic:</strong> Unsupported or unrecognized token standards will prevent the transaction, protecting you from errors.</li>
+            <li><strong>Recipient Validation:</strong> Checks that destination wallets can receive the asset type.</li>
+        </ul>
+
+        <p>As Solana's NFT standards evolve (e.g., Token 2022, Core), BulkBlast will continue to update its support to include the latest innovations.</p>
+
+    </main>
+
+    <!-- Download CTA Strip -->
+    <div class="download-cta-strip">
+        <div class="download-cta-content">
+            <div class="download-cta-text">
+                <span class="download-cta-title">Start using BulkBlast today</span>
+                <span class="download-cta-subtitle">Available for Android only</span>
+            </div>
+            <a href="https://github.com/Somtiee/BulkBlast/raw/refs/heads/main/releases/BULKBLAST%20APK%20FILE.apk" class="download-cta-btn">Download APK</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started - BulkBlast Docs</title>
+    <meta name="description" content="How to set up BulkBlast on Android, create wallets, and start sending bulk transactions on Solana.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="assets/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="docs-layout">
+
+    <header class="docs-header">
+        <a href="../index.html" class="logo-link">
+            <img src="assets/logo.png" alt="BulkBlast Logo" class="logo-img">
+            <span>BulkBlast Docs</span>
+        </a>
+        <div class="header-actions">
+            <a href="https://github.com/Somtiee/Bulkblast" target="_blank" class="header-link">GitHub</a>
+            <a href="https://x.com/Bulkblast_app" target="_blank" class="header-link">Twitter</a>
+            <button class="mobile-menu-toggle">☰</button>
+        </div>
+    </header>
+
+    <nav class="docs-sidebar">
+        <div class="sidebar-group">
+            <div class="sidebar-title">Introduction</div>
+            <a href="index.html" class="sidebar-link">Overview</a>
+            <a href="getting-started.html" class="sidebar-link active">Getting Started</a>
+            <a href="how-it-works.html" class="sidebar-link">How It Works</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Features</div>
+            <a href="fees-and-payments.html" class="sidebar-link">Fees & Payments</a>
+            <a href="swaps.html" class="sidebar-link">Swaps (Jupiter)</a>
+            <a href="nft-support.html" class="sidebar-link">NFT Support</a>
+        </div>
+        <div class="sidebar-group">
+            <div class="sidebar-title">Resources</div>
+            <a href="roadmap.html" class="sidebar-link">Roadmap</a>
+            <a href="faq.html" class="sidebar-link">FAQ</a>
+        </div>
+    </nav>
+
+    <main class="docs-content">
+        <h1>Getting Started</h1>
+        <p class="subtitle">Set up BulkBlast on your Android device and prepare your wallet for your first bulk transaction.</p>
+
+        <div class="callout callout-info">
+            <h4>Android Only</h4>
+            <p>BulkBlast is currently available exclusively for Android. iOS support is planned for future roadmap phases.</p>
+        </div>
+
+        <h2 id="quick-start">Quick Start Checklist</h2>
+        <ol class="step-list">
+            <li><span class="step-title">Install the App</span> Download the APK from the official website or GitHub Releases.</li>
+            <li><span class="step-title">Set Up Wallet</span> Create a new wallet or import an existing private key.</li>
+            <li><span class="step-title">Add Recipients</span> Import a CSV or manually add wallet addresses.</li>
+            <li><span class="step-title">Select Asset</span> Choose SOL, an SPL token, or an NFT to send.</li>
+            <li><span class="step-title">Review & Send</span> Run the safety simulation and confirm the transaction.</li>
+        </ol>
+
+        <h2 id="installation">1. Installation</h2>
+        <p>BulkBlast is distributed as an APK file for Android devices. To install:</p>
+        <ol>
+            <li>Download the latest <code>bulkblast.apk</code> from the <a href="../index.html">website</a> or GitHub.</li>
+            <li>Open the file on your Android device.</li>
+            <li>If prompted, allow installation from "Unknown Sources" (this is standard for direct APK downloads).</li>
+            <li>Launch the app.</li>
+        </ol>
+
+        <h2 id="wallet-setup">2. Wallet Setup</h2>
+        <p>When you first launch BulkBlast, you'll need to connect a wallet. BulkBlast supports:</p>
+        <ul>
+            <li><strong>Create New Wallet:</strong> Generates a new non-custodial Solana wallet locally on your device.</li>
+            <li><strong>Import Private Key:</strong> Import an existing wallet using its private key.</li>
+        </ul>
+
+        <div class="callout callout-warning">
+            <h4>Security Note</h4>
+            <p>Your private keys are encrypted and stored securely on your device's keystore. They are never transmitted to any external server.</p>
+        </div>
+
+        <h2 id="network-selection">3. Devnet vs Mainnet</h2>
+        <p>You can switch between Solana networks in the <strong>Settings</strong> tab:</p>
+        <ul>
+            <li><strong>Mainnet-Beta:</strong> For real transactions with real assets.</li>
+            <li><strong>Devnet:</strong> For testing with "fake" SOL. We highly recommend trying your first bulk send on Devnet to get comfortable with the workflow.</li>
+        </ul>
+
+        <h2 id="app-overview">App Overview</h2>
+        <div class="card-grid">
+            <div class="docs-card">
+                <h3>Create</h3>
+                <p>The main dashboard where you start new airdrops or bulk transfers.</p>
+            </div>
+            <div class="docs-card">
+                <h3>History</h3>
+                <p>View past transactions, successful sends, and exportable receipts.</p>
+            </div>
+            <div class="docs-card">
+                <h3>Wallet</h3>
+                <p>View your current balance, portfolio value, and asset list.</p>
+            </div>
+            <div class="docs-card">
+                <h3>Settings</h3>
+                <p>Manage RPC endpoints, network selection, and security preferences.</p>
+            </div>
+        </div>
+
+        <h2>Next Steps</h2>
+        <p>Now that you're set up, learn how to execute your first bulk transaction.</p>
+        <p><a href="how-it-works.html">Read: How It Works &rarr;</a></p>
+
+    </main>
+
+    <!-- Download CTA Strip -->
+    <div class="download-cta-strip">
+        <div class="download-cta-content">
+            <div class="download-cta-text">
+                <span class="download-cta-title">Start using BulkBlast today</span>
+                <span class="download-cta-subtitle">Available for Android only</span>
+            </div>
+            <a href="https://github.com/Somtiee/BulkBlast/raw/refs/heads/main/releases/BULKBLAST%20APK%20FILE.apk" class="download-cta-btn">Download APK</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
