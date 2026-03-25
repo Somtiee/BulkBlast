@@ -39,8 +39,11 @@ export const JupiterTokenService = {
       lastFetchTime = now;
       return mapped;
     } catch (e) {
-      console.warn('Jupiter Token List fetch failed, falling back to local config', e);
-      return Object.values(TOKENS); // Fallback
+      // Avoid spamming network retries: cache the fallback for the TTL window.
+      const fallback = Object.values(TOKENS);
+      tokenListCache = fallback;
+      lastFetchTime = now;
+      return fallback;
     }
   },
 

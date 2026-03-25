@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, Alert, Modal, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, View, StyleSheet, Text, ActivityIndicator, Alert, Modal, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,19 +9,89 @@ import { Button, Card, Input, Row, Screen, Chip } from '../../components/ui';
 import { spacing, typography, useTheme } from '../../theme';
 import { useApp } from '../../state/context';
 import { JupiterSwapService, type QuoteResponse, lastRequestDiagnostics } from '../../services/JupiterSwapService';
-import { getNetwork, getSolBalance, getSplBalance, getConnection, sendSol, sendSplToken, getWalletPortfolio, type TokenBalance } from '../../services/SolanaService';
+import {
+  DflowSwapService,
+  type DflowQuoteResponse,
+  lastDflowRequestDiagnostics,
+} from '../../services/DflowSwapService';
+import {
+  getNetwork,
+  getSolBalance,
+  getSplBalance,
+  getConnection,
+  sendSol,
+  sendSplToken,
+  getWalletPortfolio,
+  getSplTokenInfo,
+  type TokenBalance,
+} from '../../services/SolanaService';
 import { PriceService } from '../../services/PriceService';
 import { AssetMetadataService, type TokenMeta } from '../../services/AssetMetadataService';
 import { JupiterTokenService } from '../../services/JupiterTokenService';
 import { signTransaction, signVersionedTransaction } from '../../services/WalletService';
 import { LAMPORTS_PER_SOL, PublicKey, Transaction, Connection, VersionedTransaction } from '@solana/web3.js';
 import { hasJupiterApiKey } from '../../config/jupiter';
+import { isDflowConfigured } from '../../config/dflow';
 import { TOKENS, DEFAULT_SWAP_OUTPUT_MINT } from '../../config/tokens';
+import { ConfettiBurst } from '../../components/ui/ConfettiBurst';
 
 type Props = NativeStackScreenProps<CreateDropStackParamList, 'SwapModal'>;
+type RouteProvider = 'jupiter' | 'dflow';
+type RouteQuote = {
+  provider: RouteProvider;
+  quote: QuoteResponse | DflowQuoteResponse;
+  outAmount: string;
+  priceImpactPct: string;
+  hops: number;
+};
 
 // Use centralized tokens plus any dynamic ones
 const POPULAR_LIST = [TOKENS.SOL, TOKENS.USDC, TOKENS.USDT, TOKENS.JUP, TOKENS.BONK, TOKENS.SKR];
+
+/** Returns trimmed mint if `input` is a valid Solana address, else null. */
+function tryParseMintAddress(input: string): string | null {
+  const t = input.trim();
+  if (!t) return null;
+  try {
+    new PublicKey(t);
+    return t;
+  } catch {
+    return null;
+  }
+}
+
+function isSeekerAliasNotCanonical(token: TokenMeta): boolean {
+  const sym = (token.symbol || '').toUpperCase();
+  const name = (token.name || '').toUpperCase();
+  const seekerLike = sym === 'SEEKER' || name.includes('SEEKER');
+  return seekerLike && token.mint !== TOKENS.SKR.mint;
+}
+
+function dedupeAndNormalizeTokens(tokens: TokenMeta[]): TokenMeta[] {
+  const out = new Map<string, TokenMeta>();
+  for (const t of tokens) {
+    if (!t?.mint) continue;
+    if (isSeekerAliasNotCanonical(t)) continue;
+
+    const canonical =
+      t.mint === TOKENS.SOL.mint
+        ? TOKENS.SOL
+        : t.mint === TOKENS.USDC.mint
+        ? TOKENS.USDC
+        : t.mint === TOKENS.USDT.mint
+        ? TOKENS.USDT
+        : t.mint === TOKENS.JUP.mint
+        ? TOKENS.JUP
+        : t.mint === TOKENS.BONK.mint
+        ? TOKENS.BONK
+        : t.mint === TOKENS.SKR.mint
+        ? TOKENS.SKR
+        : t;
+
+    if (!out.has(canonical.mint)) out.set(canonical.mint, canonical);
+  }
+  return Array.from(out.values());
+}
 
 export function SwapModal({ navigation }: Props) {
   const { state, dispatch } = useApp();
@@ -37,6 +107,8 @@ export function SwapModal({ navigation }: Props) {
   
   const [loading, setLoading] = useState(false);
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
+  const [routeQuotes, setRouteQuotes] = useState<RouteQuote[]>([]);
+  const [selectedRouteProvider, setSelectedRouteProvider] = useState<RouteProvider>('jupiter');
   const [swapping, setSwapping] = useState(false);
   const [slippage, setSlippage] = useState<number>(50); // 0.5% default
   
@@ -51,9 +123,20 @@ export function SwapModal({ navigation }: Props) {
   const [showDebug, setShowDebug] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 
+  // Swap success UX
+  const [swapSuccessVisible, setSwapSuccessVisible] = useState(false);
+  const [swapSuccessSignature, setSwapSuccessSignature] = useState('');
+  const successScale = useRef(new Animated.Value(0.9)).current;
+  const successFade = useRef(new Animated.Value(0)).current;
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [signatureCopied, setSignatureCopied] = useState(false);
+  const signatureCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Validation
   const isMainnet = getNetwork() === 'mainnet-beta';
   const hasApiKey = hasJupiterApiKey();
+  const hasDflow = isDflowConfigured();
 
   // Load Wallet Balances & Tokens
   useEffect(() => {
@@ -87,7 +170,7 @@ export function SwapModal({ navigation }: Props) {
          enriched.unshift(TOKENS.SOL);
       }
       
-      setWalletTokens(enriched);
+      setWalletTokens(dedupeAndNormalizeTokens(enriched));
 
     } catch (e) {
       console.warn('Balance load failed', e);
@@ -98,6 +181,7 @@ export function SwapModal({ navigation }: Props) {
   useEffect(() => {
     loadBalances();
     setQuote(null);
+    setRouteQuotes([]);
   }, [inputToken]);
 
   // Fetch Input USD Price
@@ -107,10 +191,17 @@ export function SwapModal({ navigation }: Props) {
       return;
     }
     const fetchPrice = async () => {
-      const prices = await PriceService.getPrices([inputToken.mint]);
-      const price = prices[inputToken.mint];
-      if (price) {
-        setAmountUsd((parseFloat(amount) * price).toFixed(2));
+      try {
+        const prices = await PriceService.getTokenUsdPrices([inputToken.mint]);
+        const price = prices[inputToken.mint];
+        if (price) {
+          setAmountUsd((parseFloat(amount) * price).toFixed(2));
+        } else {
+          setAmountUsd(null);
+        }
+      } catch (e) {
+        // Keep swap UX alive even when pricing API fails.
+        setAmountUsd(null);
       }
     };
     fetchPrice();
@@ -119,10 +210,11 @@ export function SwapModal({ navigation }: Props) {
   // Auto-Quote Debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (amount && parseFloat(amount) > 0 && isMainnet && hasApiKey) {
+      if (amount && parseFloat(amount) > 0 && isMainnet && (hasApiKey || hasDflow)) {
         onGetQuote();
       } else {
         setQuote(null);
+        setRouteQuotes([]);
       }
     }, 600);
     return () => clearTimeout(timer);
@@ -130,7 +222,8 @@ export function SwapModal({ navigation }: Props) {
 
   async function onSearchToken(query: string) {
     setSearchQuery(query);
-    if (!query) {
+    const q = query.trim();
+    if (!q) {
       setSearchResults([]);
       return;
     }
@@ -138,12 +231,13 @@ export function SwapModal({ navigation }: Props) {
     try {
       // 1. Check Wallet Tokens
       const walletMatches = walletTokens.filter(t => 
-        t.symbol.toLowerCase().includes(query.toLowerCase()) || 
-        t.name.toLowerCase().includes(query.toLowerCase())
+        t.symbol.toLowerCase().includes(q.toLowerCase()) || 
+        t.name.toLowerCase().includes(q.toLowerCase()) ||
+        t.mint.toLowerCase().includes(q.toLowerCase())
       );
       
       // 2. Jupiter Search (includes strict list + mint search)
-      const jupMatches = await JupiterTokenService.searchTokens(query);
+      const jupMatches = await JupiterTokenService.searchTokens(q);
       
       // Merge: Wallet > Jup Matches
       const combined = [...walletMatches];
@@ -153,8 +247,26 @@ export function SwapModal({ navigation }: Props) {
           combined.push(m);
         }
       }
+
+      // 3. Direct mint fallback for fresh launches (e.g. Bags) not in Jupiter strict list yet.
+      const mintPk = tryParseMintAddress(q);
+      if (mintPk && !combined.find((c) => c.mint === mintPk)) {
+        try {
+          const info = await getSplTokenInfo(mintPk);
+          const meta = await AssetMetadataService.getMetadata(mintPk);
+          combined.push({
+            mint: mintPk,
+            symbol: meta?.symbol || `${mintPk.slice(0, 4)}...${mintPk.slice(-4)}`,
+            name: meta?.name || 'SPL Token',
+            iconUrl: meta?.iconUrl,
+            decimals: meta?.decimals ?? info.decimals ?? 9,
+          });
+        } catch {
+          // invalid mint or RPC/network — user may need full mint + mainnet
+        }
+      }
       
-      setSearchResults(combined);
+      setSearchResults(dedupeAndNormalizeTokens(combined));
     } catch (e) {
       console.warn('Search failed', e);
     } finally {
@@ -179,6 +291,7 @@ export function SwapModal({ navigation }: Props) {
     setOutputToken(temp);
     setAmount(''); 
     setQuote(null);
+    setRouteQuotes([]);
   }
 
   async function onGetQuote() {
@@ -193,14 +306,53 @@ export function SwapModal({ navigation }: Props) {
       const decimals = inputToken.decimals ?? 9;
       const lamports = Math.round(amountFloat * Math.pow(10, decimals));
       
-      const q = await JupiterSwapService.getQuote({
-        inputMint: inputToken.mint,
-        outputMint: outputToken.mint,
-        amountLamports: lamports.toString(),
-        slippageBps: slippage,
-      });
-      
-      setQuote(q);
+      const quotePromises: Array<Promise<RouteQuote | null>> = [];
+
+      if (hasApiKey) {
+        quotePromises.push(
+          JupiterSwapService.getQuote({
+            inputMint: inputToken.mint,
+            outputMint: outputToken.mint,
+            amountLamports: lamports.toString(),
+            slippageBps: slippage,
+          })
+            .then((q) => ({
+              provider: 'jupiter' as const,
+              quote: q,
+              outAmount: q.outAmount,
+              priceImpactPct: q.priceImpactPct || '0',
+              hops: q.routePlan?.length || 1,
+            }))
+            .catch(() => null)
+        );
+      }
+
+      if (hasDflow) {
+        quotePromises.push(
+          DflowSwapService.getQuote({
+            inputMint: inputToken.mint,
+            outputMint: outputToken.mint,
+            amountLamports: lamports.toString(),
+            slippageBps: slippage,
+          })
+            .then((q) => ({
+              provider: 'dflow' as const,
+              quote: q,
+              outAmount: q.outAmount,
+              priceImpactPct: q.priceImpactPct || '0',
+              hops: q.routePlan?.length || 1,
+            }))
+            .catch(() => null)
+        );
+      }
+
+      const allQuotes = (await Promise.all(quotePromises)).filter((q): q is RouteQuote => !!q);
+      if (!allQuotes.length) throw new Error('No route found from Jupiter or DFLOW');
+
+      allQuotes.sort((a, b) => parseInt(b.outAmount, 10) - parseInt(a.outAmount, 10));
+      setRouteQuotes(allQuotes);
+      setSelectedRouteProvider(allQuotes[0].provider);
+      setQuote(allQuotes[0].provider === 'jupiter' ? (allQuotes[0].quote as QuoteResponse) : null);
       
     } catch (e: any) {
       console.warn('Quote error', e);
@@ -212,25 +364,57 @@ export function SwapModal({ navigation }: Props) {
   }
 
   function getOutputAmountUi() {
-    if (!quote) return '0.00';
-    const raw = parseInt(quote.outAmount);
+    const selected =
+      routeQuotes.find((r) => r.provider === selectedRouteProvider) || routeQuotes[0];
+    if (!selected) return '0.00';
+    const raw = parseInt(selected.outAmount);
     // Use outputToken decimals if available, fallback to 6 (typical for SPL like USDC/SKR) or 9 (SOL)
     const decimals = outputToken.decimals ?? 6; 
     return (raw / Math.pow(10, decimals)).toFixed(4);
   }
 
   async function onSwap() {
-    if (!quote || !state.walletPublicKey) return;
+    const selected =
+      routeQuotes.find((r) => r.provider === selectedRouteProvider) || routeQuotes[0];
+    if (!selected || !state.walletPublicKey) return;
     setSwapping(true);
     try {
-      // 1. Get Swap Transaction
-      const { swapTransactionBase64 } = await JupiterSwapService.getSwapTransaction({
-        quoteResponse: quote,
-        userPublicKey: state.walletPublicKey,
-      });
+      let swapTransactionBase64 = '';
+      let txProvider: RouteProvider = selected.provider;
+      try {
+        if (selected.provider === 'jupiter') {
+          const res = await JupiterSwapService.getSwapTransaction({
+            quoteResponse: selected.quote as QuoteResponse,
+            userPublicKey: state.walletPublicKey,
+          });
+          swapTransactionBase64 = res.swapTransactionBase64;
+        } else {
+          const res = await DflowSwapService.getSwapTransaction({
+            quoteResponse: selected.quote as DflowQuoteResponse,
+            userPublicKey: state.walletPublicKey,
+          });
+          swapTransactionBase64 = res.swapTransactionBase64;
+        }
+      } catch (routeErr) {
+        // If DFLOW build fails, gracefully fallback to Jupiter route if present.
+        const jupiterFallback = routeQuotes.find((r) => r.provider === 'jupiter');
+        if (selected.provider === 'dflow' && jupiterFallback) {
+          const res = await JupiterSwapService.getSwapTransaction({
+            quoteResponse: jupiterFallback.quote as QuoteResponse,
+            userPublicKey: state.walletPublicKey,
+          });
+          swapTransactionBase64 = res.swapTransactionBase64;
+          txProvider = 'jupiter';
+        } else {
+          throw routeErr;
+        }
+      }
 
       // 2. Deserialize
-      const transaction = JupiterSwapService.deserializeSwapTransaction(swapTransactionBase64);
+      const transaction =
+        txProvider === 'jupiter'
+          ? JupiterSwapService.deserializeSwapTransaction(swapTransactionBase64)
+          : DflowSwapService.deserializeSwapTransaction(swapTransactionBase64);
 
       // 3. Sign & Send
       const connection = getConnection();
@@ -258,10 +442,34 @@ export function SwapModal({ navigation }: Props) {
       const confirmation = await connection.confirmTransaction(signature, 'confirmed');
       if (confirmation.value.err) throw new Error('Swap transaction failed on chain.');
 
-      Alert.alert('Success', `Swapped! Signature: ${signature.slice(0, 8)}...`);
+      // Success modal w/ animation + confetti
+      setSwapSuccessSignature(signature);
+      setSwapSuccessVisible(true);
+      setSignatureCopied(false);
+      Animated.parallel([
+        Animated.spring(successScale, {
+          toValue: 1,
+          friction: 7,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+        Animated.timing(successFade, {
+          toValue: 1,
+          duration: 250,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+      successTimerRef.current = setTimeout(() => {
+        setSwapSuccessVisible(false);
+      }, 2400);
+
       loadBalances(); // Refresh balances
       setAmount('');
       setQuote(null);
+      setRouteQuotes([]);
 
     } catch (e: any) {
       console.error(e);
@@ -289,7 +497,7 @@ export function SwapModal({ navigation }: Props) {
   );
 
   return (
-    <Screen title="Swap" subtitle="Powered by Jupiter">
+    <Screen title="Swap" subtitle="Aggregator (Jupiter + DFLOW)">
       <View style={{ padding: spacing[4] }}>
         
         {/* SELL CARD */}
@@ -336,7 +544,7 @@ export function SwapModal({ navigation }: Props) {
               <View style={{ flex: 1, alignItems: 'flex-end', justifyContent: 'center' }}>
                  {loading ? (
                     <ActivityIndicator size="small" color={colors.primary} />
-                 ) : quote ? (
+                 ) : routeQuotes.length > 0 ? (
                     <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text }}>
                        {getOutputAmountUi()}
                     </Text>
@@ -348,24 +556,76 @@ export function SwapModal({ navigation }: Props) {
         </View>
         
         {/* INFO / SETTINGS */}
-        {quote && (
+        {routeQuotes.length > 0 && (() => {
+          const activeRoute = routeQuotes.find((r) => r.provider === selectedRouteProvider) || routeQuotes[0];
+          return (
           <View style={styles.infoSection}>
-             <View style={styles.infoRow}>
+             <Text style={[styles.infoLabel, { marginBottom: 8 }]}>Route</Text>
+             {routeQuotes.map((rq, idx) => {
+                const isActive = rq.provider === selectedRouteProvider;
+                return (
+                  <TouchableOpacity
+                    key={rq.provider}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setSelectedRouteProvider(rq.provider);
+                      setQuote(rq.provider === 'jupiter' ? (rq.quote as QuoteResponse) : null);
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: 12,
+                      borderRadius: 12,
+                      marginBottom: 6,
+                      borderWidth: 1.5,
+                      borderColor: isActive ? colors.primary : 'rgba(255,255,255,0.08)',
+                      backgroundColor: isActive ? colors.primary + '14' : 'rgba(255,255,255,0.03)',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{
+                        width: 18, height: 18, borderRadius: 9,
+                        borderWidth: 2,
+                        borderColor: isActive ? colors.primary : '#555',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {isActive && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primary }} />}
+                      </View>
+                      <Text style={{ color: isActive ? colors.primary : '#ccc', fontWeight: '700', fontSize: 14 }}>
+                        {rq.provider === 'jupiter' ? 'Jupiter' : 'DFLOW'}
+                      </Text>
+                      {idx === 0 && (
+                        <View style={{ backgroundColor: colors.primary, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>BEST</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ color: '#ccc', fontWeight: '600', fontSize: 14 }}>
+                      {formatRawAmount(rq.outAmount, outputToken.decimals ?? 6)} {outputToken.symbol}
+                    </Text>
+                  </TouchableOpacity>
+                );
+             })}
+             <View style={[styles.infoRow, { marginTop: 8 }]}>
                 <Text style={styles.infoLabel}>Rate</Text>
-                <Text style={styles.infoValue}>1 {inputToken.symbol} ≈ {((parseInt(quote.outAmount) / Math.pow(10, outputToken.decimals || 9)) / parseFloat(amount)).toFixed(4)} {outputToken.symbol}</Text>
+                <Text style={styles.infoValue}>1 {inputToken.symbol} ≈ {(parseFloat(getOutputAmountUi()) / Math.max(parseFloat(amount || '0'), 0.0000001)).toFixed(4)} {outputToken.symbol}</Text>
              </View>
              <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Price Impact</Text>
-                <Text style={[styles.infoValue, parseFloat(quote.priceImpactPct) > 1 && { color: colors.danger }]}>
-                   {parseFloat(quote.priceImpactPct) < 0.01 ? '< 0.01%' : `${quote.priceImpactPct}%`}
+                <Text style={[styles.infoValue, parseFloat(activeRoute.priceImpactPct) > 1 && { color: colors.danger }]}>
+                   {parseFloat(activeRoute.priceImpactPct) < 0.01 ? '< 0.01%' : `${activeRoute.priceImpactPct}%`}
                 </Text>
              </View>
              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Route</Text>
-                <Text style={styles.infoValue}>Jupiter • {quote.routePlan?.length || 1} Hop(s)</Text>
+                <Text style={styles.infoLabel}>Via</Text>
+                <Text style={styles.infoValue}>
+                  {activeRoute.provider === 'jupiter' ? 'Jupiter' : 'DFLOW'} • {activeRoute.hops || 1} Hop(s)
+                </Text>
              </View>
           </View>
-        )}
+          );
+        })()}
 
         {/* Slippage & Debug */}
         <View style={{ marginTop: spacing[4], flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -387,10 +647,10 @@ export function SwapModal({ navigation }: Props) {
         {showDebug && lastError && (
            <View style={styles.debugBox}>
               <Text style={styles.debugText}>{lastError}</Text>
-              {lastRequestDiagnostics && (
+              {(lastRequestDiagnostics || lastDflowRequestDiagnostics) && (
                  <>
-                   <Text style={styles.debugText}>Status: {lastRequestDiagnostics.status}</Text>
-                   <Text style={styles.debugText}>API Key: {lastRequestDiagnostics.apiKeyPresent ? 'Yes' : 'No'}</Text>
+                   <Text style={styles.debugText}>Jupiter Status: {lastRequestDiagnostics?.status ?? 'N/A'}</Text>
+                   <Text style={styles.debugText}>DFLOW Status: {lastDflowRequestDiagnostics?.status ?? 'N/A'}</Text>
                  </>
               )}
            </View>
@@ -400,11 +660,11 @@ export function SwapModal({ navigation }: Props) {
         <View style={{ marginTop: spacing[6] }}>
            {!isMainnet ? (
               <Button title="Swaps are Mainnet-Only" disabled variant="secondary" onPress={() => {}} />
-           ) : !hasApiKey ? (
-              <Button title="API Key Missing (Check Config)" disabled variant="secondary" onPress={() => {}} />
+          ) : !hasApiKey && !hasDflow ? (
+              <Button title="No Swap Provider Configured" disabled variant="secondary" onPress={() => {}} />
            ) : !amount ? (
               <Button title="Enter Amount" disabled variant="secondary" onPress={() => {}} />
-           ) : quote ? (
+           ) : routeQuotes.length > 0 ? (
               <Button title={swapping ? "Swapping..." : "Swap"} onPress={onSwap} disabled={swapping} variant="primary" style={{ height: 56 }} textStyle={{ fontSize: 18 }} />
            ) : (
               <Button title={loading ? "Getting Quote..." : "Get Quote"} disabled variant="secondary" onPress={() => {}} />
@@ -432,25 +692,47 @@ export function SwapModal({ navigation }: Props) {
                />
             </View>
 
-            <ScrollView contentContainerStyle={{ paddingHorizontal: spacing[4] }}>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: spacing[4], paddingBottom: spacing[8] }}>
                {/* Search Results */}
                {searchQuery ? (
-                  searchResults.map(t => (
-                     <TouchableOpacity key={t.mint} style={styles.tokenListRow} onPress={() => onSelectToken(t)}>
-                        <Image source={{ uri: t.iconUrl }} style={styles.listIcon} />
+                  searching ? (
+                    <View style={{ paddingVertical: spacing[6], alignItems: 'center' }}>
+                      <ActivityIndicator color={colors.primary} />
+                      <Text style={{ marginTop: spacing[2], color: colors.textSecondary, fontSize: 12 }}>Searching…</Text>
+                    </View>
+                  ) : searchResults.length > 0 ? (
+                    searchResults.map((t) => (
+                      <TouchableOpacity key={t.mint} style={styles.tokenListRow} onPress={() => onSelectToken(t)}>
+                        {t.iconUrl ? (
+                          <Image source={{ uri: t.iconUrl }} style={styles.listIcon} />
+                        ) : (
+                          <View style={styles.listIcon} />
+                        )}
                         <View>
-                           <Text style={[styles.listSymbol, { color: colors.text }]}>{t.symbol}</Text>
-                           <Text style={[styles.listName, { color: colors.textSecondary }]}>{t.name}</Text>
+                          <Text style={[styles.listSymbol, { color: colors.text }]}>{t.symbol}</Text>
+                          <Text style={[styles.listName, { color: colors.textSecondary }]}>{t.name}</Text>
                         </View>
-                        <Text style={[styles.listMint, { color: colors.textSecondary }]}>{t.mint.slice(0, 4)}...{t.mint.slice(-4)}</Text>
-                     </TouchableOpacity>
-                  ))
+                        <Text style={[styles.listMint, { color: colors.textSecondary }]}>
+                          {t.mint.slice(0, 4)}...{t.mint.slice(-4)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <Text style={{ color: colors.textSecondary, fontSize: 13, paddingVertical: spacing[4] }}>
+                      No matches. Paste the full token mint (complete address). Short fragments won’t work. New Bags tokens may
+                      not appear in search until the mint is fetched — ensure you’re on mainnet with RPC working.
+                    </Text>
+                  )
                ) : (
                   <>
                      <Text style={styles.sectionTitle}>Your Tokens</Text>
                      {walletTokens.map(t => (
                         <TouchableOpacity key={t.mint} style={styles.tokenListRow} onPress={() => onSelectToken(t)}>
-                           <Image source={{ uri: t.iconUrl }} style={styles.listIcon} />
+                           {t.iconUrl ? (
+                             <Image source={{ uri: t.iconUrl }} style={styles.listIcon} />
+                           ) : (
+                             <View style={styles.listIcon} />
+                           )}
                            <View>
                               <Text style={[styles.listSymbol, { color: colors.text }]}>{t.symbol}</Text>
                               <Text style={[styles.listName, { color: colors.textSecondary }]}>{t.name}</Text>
@@ -459,9 +741,13 @@ export function SwapModal({ navigation }: Props) {
                      ))}
                      
                      <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Popular Tokens</Text>
-                     {POPULAR_LIST.map(t => (
+                     {POPULAR_LIST.filter((t) => !walletTokens.some((w) => w.mint === t.mint)).map(t => (
                         <TouchableOpacity key={t.mint} style={styles.tokenListRow} onPress={() => onSelectToken(t)}>
-                           <Image source={{ uri: t.iconUrl }} style={styles.listIcon} />
+                           {t.iconUrl ? (
+                             <Image source={{ uri: t.iconUrl }} style={styles.listIcon} />
+                           ) : (
+                             <View style={styles.listIcon} />
+                           )}
                            <View>
                               <Text style={[styles.listSymbol, { color: colors.text }]}>{t.symbol}</Text>
                               <Text style={[styles.listName, { color: colors.textSecondary }]}>{t.name}</Text>
@@ -472,6 +758,73 @@ export function SwapModal({ navigation }: Props) {
                )}
             </ScrollView>
          </View>
+      </Modal>
+
+      {/* Swap success modal */}
+      <Modal
+        visible={swapSuccessVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSwapSuccessVisible(false)}
+      >
+        <View style={[styles.successOverlay, { backgroundColor: 'rgba(0,0,0,0.55)' }]}>
+          <Animated.View
+            style={[
+              styles.successCard,
+              {
+                opacity: successFade,
+                transform: [{ scale: successScale }],
+                backgroundColor: colors.background,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <ConfettiBurst density={44} />
+            <View style={{ alignItems: 'center', paddingTop: 6 }}>
+              <Text style={[styles.successTitle, { color: colors.text }]}>Swap Success</Text>
+              {swapSuccessSignature ? (
+                <>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={async () => {
+                      try {
+                        await Clipboard.setStringAsync(swapSuccessSignature);
+                        setSignatureCopied(true);
+                        if (signatureCopiedTimerRef.current) clearTimeout(signatureCopiedTimerRef.current);
+                        signatureCopiedTimerRef.current = setTimeout(() => setSignatureCopied(false), 1200);
+                      } catch {
+                        // ignore copy failures
+                      }
+                    }}
+                    style={{ marginTop: spacing[1] }}
+                  >
+                    <Text
+                      style={[
+                        styles.successSub,
+                        { color: colors.textSecondary, textDecorationLine: 'underline' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      Tap to copy tx: {`${swapSuccessSignature.slice(0, 8)}...`}
+                    </Text>
+                  </TouchableOpacity>
+                  {signatureCopied ? (
+                    <Text style={[styles.successSub, { color: colors.success, marginTop: spacing[1] }]}>Copied</Text>
+                  ) : null}
+                </>
+              ) : null}
+            </View>
+
+            <View style={{ marginTop: spacing[4] }}>
+              <Button
+                title="Done"
+                onPress={() => setSwapSuccessVisible(false)}
+                variant="primary"
+                style={{ height: 52 }}
+              />
+            </View>
+          </Animated.View>
+        </View>
       </Modal>
     </Screen>
   );
@@ -626,4 +979,36 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     fontSize: 10,
   },
+
+  successOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing[4],
+  },
+  successCard: {
+    width: '100%',
+    borderRadius: 20,
+    padding: spacing[4],
+    borderWidth: 1,
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  successTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  successSub: {
+    marginTop: spacing[2],
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });
+
+function formatRawAmount(rawAmount: string, decimals: number): string {
+  const raw = parseInt(rawAmount || '0', 10);
+  if (!raw || Number.isNaN(raw)) return '0.00';
+  return (raw / Math.pow(10, decimals)).toFixed(4);
+}

@@ -7,6 +7,7 @@ import { spacing, typography, useTheme } from '../../theme';
 import type { DropReceipt } from '../../types/receipt';
 import { StorageService } from '../../services/StorageService';
 import { exportReceiptCsv } from '../../services/ExportService';
+import { TOKENS } from '../../config/tokens';
 
 type Props = NativeStackScreenProps<CreateDropStackParamList, 'ReceiptDetails'>;
 
@@ -39,6 +40,11 @@ export function ReceiptDetails({ navigation, route }: Props) {
         list: { maxHeight: 300 },
         sig: { color: colors.textSecondary, fontSize: typography.fontSize.caption },
         err: { color: colors.danger, fontSize: 11 },
+        longValue: {
+          maxWidth: '62%',
+          flexShrink: 1,
+          textAlign: 'right',
+        },
       }),
     [colors]
   );
@@ -61,6 +67,12 @@ export function ReceiptDetails({ navigation, route }: Props) {
 
   const okCount = receipt.batches.filter((b) => b.ok).length;
   const failCount = receipt.batches.filter((b) => !b.ok).length;
+  const feeTokenLabel =
+    receipt.fee.feeMint === TOKENS.SOL.mint
+      ? 'SOL'
+      : receipt.fee.feeMint === TOKENS.SKR.mint
+      ? 'SKR'
+      : receipt.fee.feeMint;
 
   async function onExportCsv() {
     if (!receipt || exporting) return;
@@ -84,8 +96,8 @@ export function ReceiptDetails({ navigation, route }: Props) {
         <Row label="Total" value={receipt.totalAmountUi} />
         <Row label="Status" value={receipt.status} valueStyle={receipt.status === 'success' ? styles.pillSuccess : receipt.status === 'failed' ? styles.pillFailed : undefined} />
         <Divider />
-        <Row label="Fee Token" value={receipt.fee.feeMint} />
-        <Row label="Fee Amount" value={receipt.fee.feeTokens} />
+        <Row label="Fee Token" value={feeTokenLabel} />
+        <Row label="Fee Amount" value={`${receipt.fee.feeTokens} ${feeTokenLabel}`} />
         {receipt.fee.discounted ? <Text style={{ color: colors.success }}>Discount applied</Text> : null}
       </Card>
 

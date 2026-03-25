@@ -25,12 +25,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    StorageService.getItem(KEYS.THEME_MODE).then((val) => {
-      if (val && (val === 'light' || val === 'dark' || val === 'system')) {
-        setMode(val as ThemeMode);
+    let cancelled = false;
+    async function loadThemeMode() {
+      try {
+        const val = await StorageService.getItem(KEYS.THEME_MODE);
+        if (val && (val === 'light' || val === 'dark' || val === 'system')) {
+          setMode(val as ThemeMode);
+        }
+      } catch (e) {
+        console.error('Theme mode load failed', e);
+      } finally {
+        if (!cancelled) setIsReady(true);
       }
-      setIsReady(true);
-    });
+    }
+    void loadThemeMode();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const saveMode = (newMode: ThemeMode) => {

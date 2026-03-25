@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, Switch, Alert, TouchableOpacity, ActivityIndicator, Image, Modal, ScrollView, AppState, AppStateStatus, Platform } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as DocumentPicker from 'expo-document-picker';
 import { readAsStringAsync } from 'expo-file-system/legacy';
@@ -21,7 +21,8 @@ import { spacing, typography, useTheme, type Colors } from '../../theme';
 import type { SelectedAsset, AssetBalance } from '../../types/asset';
 import { PortfolioService, PortfolioSnapshot, PortfolioAsset } from '../../services/PortfolioService';
 import { AssetMetadataService } from '../../services/AssetMetadataService';
-import { StorageService, type DropReceipt, type BatchReceipt } from '../../services/StorageService';
+import { StorageService } from '../../services/StorageService';
+import type { DropReceipt, BatchReceipt } from '../../types/receipt';
 import { getNetwork } from '../../services/SolanaService';
 import { NftDetectionService } from '../../services/NftDetectionService';
 import { DetectedNftAsset, DetectedNftItem } from '../../types/nft';
@@ -33,6 +34,7 @@ import { sanitizeError } from '../../utils/errorUtils';
 const GENERIC_TOKEN_ICON = 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png';
 
 type Props = NativeStackScreenProps<CreateDropStackParamList, 'CreateDrop'>;
+const RECIPIENTS_PAGE_SIZE = 50;
 
 type NftTileProps = {
   item: DetectedNftItem;
@@ -109,6 +111,7 @@ function NftTile({ item, colors }: NftTileProps) {
 import { validateAmount, computeTotalToSend, validateRecipientsAmounts } from '../../utils/amounts';
 
 export function CreateDrop({ navigation }: Props) {
+  const route = useRoute<RouteProp<CreateDropStackParamList, 'CreateDrop'>>();
   const { state, dispatch } = useApp();
   const { colors } = useTheme();
   const isFocused = useIsFocused();
@@ -117,9 +120,12 @@ export function CreateDrop({ navigation }: Props) {
   const [singleAddress, setSingleAddress] = useState('');
   const [singleAmount, setSingleAmount] = useState('');
   const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
+  const [recipientPage, setRecipientPage] = useState(0);
 
   const [winnerCountInput, setWinnerCountInput] = useState(state.giveawayConfig.winnerCount.toString());
   const [bannerError, setBannerError] = useState<string | undefined>();
+  const [bagsBlastBannerVisible, setBagsBlastBannerVisible] = useState(false);
+  const bulkPrefillHandledKeyRef = useRef<string | null>(null);
   const [activeTab, setActiveTab] = useState<'wallet' | 'bulk_send'>('wallet');
   
   // Updated State for Portfolio
@@ -229,39 +235,47 @@ export function CreateDrop({ navigation }: Props) {
     }
   }
 
-  // Fetch Portfolio Logic (New Implementation)
+  // Fetch Portfolio Logic — shows cached data instantly, then refreshes in background.
   const loadPortfolio = async (silent = false) => {
     if (!state.walletPublicKey) return;
-    
-    // Prevent double fetch if already fetching
-    if (isFetchingPortfolio.current) return;
 
+    if (isFetchingPortfolio.current) return;
     isFetchingPortfolio.current = true;
-    
+
+    // Show cached snapshot immediately so the user sees balances right away.
+    if (!portfolio) {
+      try {
+        const cached = await PortfolioService.loadCachedSnapshot(state.walletPublicKey);
+        if (cached) {
+          setPortfolio(cached);
+          silent = true; // Already have something to show — no spinner needed.
+        }
+      } catch {}
+    }
+
     if (!silent) setLoadingPortfolio(true);
     else setRefreshingPortfolio(true);
-    
+
     try {
-      // 1. Get Full Snapshot
       const snapshot = await PortfolioService.getPortfolioSnapshot(state.walletPublicKey);
       setPortfolio(snapshot);
-      
-      // 2. Group NFTs using rawNfts from snapshot
+
       if (snapshot.rawNfts && snapshot.rawNfts.length > 0) {
-         const connection = new Connection(state.rpcEndpoint || 'https://api.mainnet-beta.solana.com');
-         const mints = snapshot.rawNfts.map(n => n.mint);
-         const groups = await NftDetectionService.detectAndGroupNfts(connection, mints, state.walletPublicKey);
-         setNftGroups(groups);
+        const connection = new Connection('https://api.mainnet-beta.solana.com');
+        const mints = snapshot.rawNfts.map((n) => n.mint);
+        NftDetectionService.detectAndGroupNfts(connection, mints, state.walletPublicKey)
+          .then((groups) => setNftGroups(groups))
+          .catch((e) => Logger.warn('NFT grouping failed', e));
       } else {
-         setNftGroups([]);
+        setNftGroups([]);
       }
     } catch (e) {
-        Logger.error('Failed to load wallet portfolio', e);
-        if (!silent) Alert.alert('Error', 'Failed to load wallet portfolio');
+      Logger.error('Failed to load wallet portfolio', e);
+      if (!silent) Alert.alert('Error', 'Failed to load wallet portfolio');
     } finally {
-        isFetchingPortfolio.current = false;
-        setLoadingPortfolio(false);
-        setRefreshingPortfolio(false);
+      isFetchingPortfolio.current = false;
+      setLoadingPortfolio(false);
+      setRefreshingPortfolio(false);
     }
   };
 
@@ -471,6 +485,62 @@ export function CreateDrop({ navigation }: Props) {
     }
   }
 
+  /**
+   * Bulk Send: optional `preFilledMint` / `preFilledSymbol` from Launch & Blast.
+   * We pre-select the mint but do not auto-insert recipients.
+   */
+  useEffect(() => {
+    const mint = route.params?.preFilledMint?.trim();
+    const launchBlastFreeFee = route.params?.launchBlastFreeFee === true;
+    if (!mint) {
+      bulkPrefillHandledKeyRef.current = null;
+      if (launchBlastFreeFee) {
+        dispatch({ type: 'promo/armLaunchBlastFreeFee' });
+        navigation.setParams({ launchBlastFreeFee: undefined });
+      }
+      return;
+    }
+    if (!state.walletPublicKey) return;
+
+    const sym = (route.params?.preFilledSymbol ?? '').trim();
+    const showBanner = route.params?.bagsBlastBanner !== false;
+
+    const key = `${mint}|${sym}|${state.walletPublicKey}`;
+    if (bulkPrefillHandledKeyRef.current === key) return;
+    bulkPrefillHandledKeyRef.current = key;
+
+    setActiveTab('bulk_send');
+    setAssetTab('SPL');
+    setMintAddress(mint);
+    setSymbol(sym);
+    void onFetchToken(mint);
+
+    dispatch({ type: 'recipients/clear' });
+    setRecipientPage(0);
+    setManualText('address,amount\n');
+
+    if (showBanner) {
+      setBagsBlastBannerVisible(true);
+    }
+    if (launchBlastFreeFee) {
+      dispatch({ type: 'promo/armLaunchBlastFreeFee' });
+    }
+
+    navigation.setParams({
+      preFilledMint: undefined,
+      preFilledSymbol: undefined,
+      bagsBlastBanner: undefined,
+      launchBlastFreeFee: undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot prefill when route delivers params
+  }, [route.params, state.walletPublicKey, dispatch, navigation]);
+
+  useEffect(() => {
+    if (!bagsBlastBannerVisible) return;
+    const t = setTimeout(() => setBagsBlastBannerVisible(false), 9000);
+    return () => clearTimeout(t);
+  }, [bagsBlastBannerVisible]);
+
   // Sync local input with global state when giveaway is enabled/disabled or reset
   useEffect(() => {
     setWinnerCountInput(state.giveawayConfig.winnerCount.toString());
@@ -514,6 +584,24 @@ export function CreateDrop({ navigation }: Props) {
         bannerText: {
           color: colors.warningText,
           fontSize: typography.fontSize.bodySmall,
+        },
+        bagsBlastBanner: {
+          marginHorizontal: spacing[4],
+          marginTop: spacing[2],
+          marginBottom: spacing[2],
+          paddingVertical: spacing[4],
+          paddingHorizontal: spacing[4],
+          backgroundColor: colors.surface2,
+          borderWidth: 1,
+          borderColor: colors.primary,
+          borderRadius: 14,
+        },
+        bagsBlastBannerText: {
+          color: colors.text,
+          fontSize: typography.fontSize.body,
+          lineHeight: typography.lineHeight.body,
+          fontWeight: typography.weight.bold,
+          textAlign: 'center',
         },
         tabContainer: {
           flexDirection: 'row',
@@ -902,6 +990,23 @@ export function CreateDrop({ navigation }: Props) {
     return state.recipients.filter((r) => state.giveawayConfig.selectedRecipientIds.includes(r.id));
   }, [state.recipients, state.giveawayConfig.selectedRecipientIds]);
 
+  const recipientTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(state.recipients.length / RECIPIENTS_PAGE_SIZE)),
+    [state.recipients.length]
+  );
+
+  const pagedRecipients = useMemo(() => {
+    const start = recipientPage * RECIPIENTS_PAGE_SIZE;
+    return state.recipients.slice(start, start + RECIPIENTS_PAGE_SIZE);
+  }, [recipientPage, state.recipients]);
+
+  useEffect(() => {
+    const maxPageIndex = Math.max(0, recipientTotalPages - 1);
+    if (recipientPage > maxPageIndex) {
+      setRecipientPage(maxPageIndex);
+    }
+  }, [recipientPage, recipientTotalPages]);
+
   return (
     <View style={styles.container}>
       <StickyAppHeader 
@@ -946,6 +1051,11 @@ export function CreateDrop({ navigation }: Props) {
            </TouchableOpacity>
         } 
       />
+      {bagsBlastBannerVisible ? (
+        <View style={styles.bagsBlastBanner} accessibilityRole="alert">
+          <Text style={styles.bagsBlastBannerText}>Just launched with Bags — now BLAST! 🚀</Text>
+        </View>
+      ) : null}
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
       
       {/* Tab Switcher Removed - Using Header Toggle instead */}
@@ -972,8 +1082,18 @@ export function CreateDrop({ navigation }: Props) {
                      <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
                    )}
                    
-                   {/* Action Buttons */}
-                   <View style={{ flexDirection: 'row', gap: 24, marginTop: 12 }}>
+                   {/* Action Buttons — same style as Send/Swap; Launch opens Bags flow */}
+                   <View
+                     style={{
+                       flexDirection: 'row',
+                       flexWrap: 'wrap',
+                       justifyContent: 'center',
+                       gap: 20,
+                       rowGap: 16,
+                       marginTop: 12,
+                       paddingHorizontal: 8,
+                     }}
+                   >
                       <TouchableOpacity style={{ alignItems: 'center', gap: 8 }} onPress={() => Clipboard.setStringAsync(state.walletPublicKey!)}>
                          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' }}>
                             <Text style={{ fontSize: 20 }}>⬇️</Text>
@@ -993,6 +1113,34 @@ export function CreateDrop({ navigation }: Props) {
                             <Text style={{ fontSize: 20 }}>🔄</Text>
                          </View>
                          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>Swap</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{ alignItems: 'center', gap: 8, minWidth: 76 }}
+                        onPress={() => navigation.navigate('LaunchBlast')}
+                        accessibilityRole="button"
+                        accessibilityLabel="Launch and Blast"
+                      >
+                         <View
+                           style={{
+                             width: 48,
+                             height: 48,
+                             borderRadius: 24,
+                             backgroundColor: colors.surface2,
+                             alignItems: 'center',
+                             justifyContent: 'center',
+                             borderWidth: 1,
+                             borderColor: colors.border,
+                           }}
+                         >
+                            <Text style={{ fontSize: 20 }}>🚀</Text>
+                         </View>
+                         <Text
+                           style={{ fontSize: 11, fontWeight: '600', color: colors.text, textAlign: 'center', maxWidth: 80 }}
+                           numberOfLines={2}
+                         >
+                           Launch & Blast
+                         </Text>
                       </TouchableOpacity>
                    </View>
                 </View>
@@ -1192,11 +1340,20 @@ export function CreateDrop({ navigation }: Props) {
             {assetTab === 'SOL' ? (
                <View style={styles.row}>
                  <Text style={[styles.label, { color: colors.text, marginBottom: 0 }]}>Balance</Text>
-                 {loadingSol ? <ActivityIndicator size="small" /> : (
-                   <Text style={{ fontSize: typography.fontSize.body, fontWeight: typography.weight.semibold, color: colors.text }}>
-                     {solBalance?.amountUi ?? '0'} SOL
-                   </Text>
-                 )}
+                 <View style={{ alignItems: 'flex-end' }}>
+                   {loadingSol ? (
+                    <ActivityIndicator size="small" />
+                  ) : (
+                    <Text style={{ fontSize: typography.fontSize.body, fontWeight: typography.weight.semibold, color: colors.text }}>
+                      {solBalance?.amountUi ?? '0'} SOL
+                    </Text>
+                  )}
+                  <Pressable onPress={fetchSolBalance} style={{ marginTop: 4 }}>
+                    <Text style={{ color: colors.primary, fontSize: typography.fontSize.caption, fontWeight: typography.weight.semibold }}>
+                      Refresh balance
+                    </Text>
+                  </Pressable>
+                 </View>
                </View>
             ) : assetTab === 'SPL' ? (
                <View>
@@ -1497,7 +1654,7 @@ export function CreateDrop({ navigation }: Props) {
               {state.recipients.length === 0 ? (
                 <Text style={styles.empty}>No recipients yet</Text>
               ) : (
-                state.recipients.slice(0, 50).map((r) => {
+                pagedRecipients.map((r) => {
                   const status = getRecipientStatus(r, colors);
                   return (
                     <Pressable 
@@ -1540,7 +1697,29 @@ export function CreateDrop({ navigation }: Props) {
                   );
                 })
               )}
-              {state.recipients.length > 50 ? <Text style={styles.hint}>Showing first 50 recipients</Text> : null}
+              {state.recipients.length > RECIPIENTS_PAGE_SIZE ? (
+                <View style={{ marginTop: spacing[3], gap: spacing[2] }}>
+                  <Text style={[styles.hint, { textAlign: 'center' }]}>
+                    Showing recipients {recipientPage * RECIPIENTS_PAGE_SIZE + 1}-{Math.min((recipientPage + 1) * RECIPIENTS_PAGE_SIZE, state.recipients.length)} of {state.recipients.length}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: spacing[2] }}>
+                    <Button
+                      title="Back"
+                      onPress={() => setRecipientPage((p) => Math.max(0, p - 1))}
+                      variant="secondary"
+                      disabled={recipientPage === 0}
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      title="Next"
+                      onPress={() => setRecipientPage((p) => Math.min(recipientTotalPages - 1, p + 1))}
+                      variant="secondary"
+                      disabled={recipientPage >= recipientTotalPages - 1}
+                      style={{ flex: 1 }}
+                    />
+                  </View>
+                </View>
+              ) : null}
             </View>
           </Card>
 

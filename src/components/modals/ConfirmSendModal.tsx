@@ -126,7 +126,7 @@ export function ConfirmSendModal({
                   {feeQuote && (
                     <Row 
                       label="Fee" 
-                      value={`${feeQuote.feeTokens} SEEKER`} 
+                      value={`${feeQuote.feeAmountUi || feeQuote.feeTokens} ${feeQuote.feeTokenSymbol || 'SKR'}`} 
                       valueStyle={{ color: colors.primary }}
                     />
                   )}

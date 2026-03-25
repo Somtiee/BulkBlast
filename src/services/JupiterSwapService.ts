@@ -1,9 +1,9 @@
 import { VersionedTransaction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
-import { JUPITER_CONFIG, hasJupiterApiKey } from '../config/jupiter';
+import { PROXY_CONFIG, hasProxyBaseUrl } from '../config/proxy';
 
-// Official V1 API Base URL
-const JUPITER_API_BASE = JUPITER_CONFIG.BASE_URL;
+// Worker injects x-api-key server-side for all proxied Jupiter routes.
+const JUPITER_PROXY_BASE = hasProxyBaseUrl() ? `${PROXY_CONFIG.BASE_URL}/jupiter` : '';
 
 export type QuoteResponse = {
   inputMint: string;
@@ -25,7 +25,7 @@ export let lastRequestDiagnostics: {
   url: string;
   status: number;
   error?: string;
-  apiKeyPresent: boolean;
+  proxyConfigured: boolean;
 } | null = null;
 
 async function fetchWithDiagnostics(
@@ -38,10 +38,6 @@ async function fetchWithDiagnostics(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
   const headers = new Headers(init?.headers);
-  // Add API Key header if available
-  if (hasJupiterApiKey()) {
-    headers.set('x-api-key', JUPITER_CONFIG.API_KEY);
-  }
   // Ensure JSON content type for POST
   if (init?.method === 'POST') {
     headers.set('Content-Type', 'application/json');
@@ -57,7 +53,7 @@ async function fetchWithDiagnostics(
   lastRequestDiagnostics = {
     url,
     status: 0,
-    apiKeyPresent: hasJupiterApiKey(),
+    proxyConfigured: !!JUPITER_PROXY_BASE,
   };
 
   try {
@@ -132,12 +128,13 @@ export const JupiterSwapService = {
     amountLamports: string;
     slippageBps?: number;
   }): Promise<QuoteResponse> => {
+    if (!JUPITER_PROXY_BASE) throw new Error('Proxy base URL missing. Set EXPO_PUBLIC_PROXY_BASE_URL.');
     // Basic validation
     if (!inputMint || !outputMint) throw new Error('Missing input or output mint');
     if (inputMint === outputMint) throw new Error('Cannot swap same token');
     if (!amountLamports || parseInt(amountLamports) <= 0) throw new Error('Invalid amount');
 
-    const url = `${JUPITER_API_BASE}/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=${slippageBps}`;
+    const url = `${JUPITER_PROXY_BASE}/swap/v1/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=${slippageBps}`;
     
     const response = await fetchWithDiagnostics(url);
     const data = await response.json();
@@ -157,7 +154,8 @@ export const JupiterSwapService = {
     dynamicComputeUnitLimit?: boolean;
     prioritizationFeeLamports?: string | number;
   }): Promise<{ swapTransactionBase64: string }> => {
-    const response = await fetchWithDiagnostics(`${JUPITER_API_BASE}/swap`, {
+    if (!JUPITER_PROXY_BASE) throw new Error('Proxy base URL missing. Set EXPO_PUBLIC_PROXY_BASE_URL.');
+    const response = await fetchWithDiagnostics(`${JUPITER_PROXY_BASE}/swap/v1/swap`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

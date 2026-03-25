@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useApp } from '../state/context';
-import { hasBuiltInWallet, getBuiltInPublicKey, unlockBuiltInSilently } from '../services/WalletService';
+import {
+  hasBuiltInWallet,
+  getBuiltInPublicKey,
+  unlockBuiltInSilently,
+  registerBuiltInUnlockListener,
+} from '../services/WalletService';
 import { StorageService, KEYS } from '../services/StorageService';
 import { useTheme } from '../theme';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { setNetwork } from '../services/SolanaService';
 import { DEFAULT_NETWORK } from '../config';
+import { TOKENS } from '../config/tokens';
 
 export function AppHydrator({ children, onReady }: { children: React.ReactNode; onReady: () => void }) {
   const { dispatch } = useApp();
@@ -31,6 +37,11 @@ export function AppHydrator({ children, onReady }: { children: React.ReactNode; 
         const treasury = await StorageService.getItem(KEYS.TREASURY_ADDRESS);
         if (treasury) {
           dispatch({ type: 'settings/setTreasuryAddress', treasuryAddress: treasury });
+        }
+
+        const feeTokenMint = await StorageService.getItem(KEYS.FEE_TOKEN_MINT);
+        if (feeTokenMint === TOKENS.SOL.mint || feeTokenMint === TOKENS.SKR.mint) {
+          dispatch({ type: 'settings/setFeeTokenMint', feeTokenMint });
         }
         
         const discount = await StorageService.getItem(KEYS.SEEKER_DISCOUNT);
@@ -78,6 +89,13 @@ export function AppHydrator({ children, onReady }: { children: React.ReactNode; 
 
     hydrate();
   }, [dispatch, onReady]);
+
+  // Keep Redux in sync when the user unlocks via biometric/device PIN during signing (signTransaction → unlockBuiltIn).
+  useEffect(() => {
+    return registerBuiltInUnlockListener((publicKey) => {
+      dispatch({ type: 'wallet/unlockedBuiltIn', publicKey });
+    });
+  }, [dispatch]);
 
   if (loading) {
     return (

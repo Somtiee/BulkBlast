@@ -20,6 +20,8 @@ import { getNetwork, setNetwork } from '../../services/SolanaService';
 import { StorageService, KEYS } from '../../services/StorageService';
 import { hasJupiterApiKey } from '../../config/jupiter';
 import { hasHeliusKey } from '../../config/helius';
+import { hasDflowApiKey, hasDflowProxy } from '../../config/dflow';
+import { TOKENS } from '../../config/tokens';
 
 type Props = NativeStackScreenProps<MainTabsParamList, 'Settings'>;
 
@@ -101,6 +103,12 @@ export function Settings({ navigation }: Props) {
     dispatch({ type: 'settings/toggleSeekerDiscount' });
   }
 
+  async function setDefaultFeeToken(token: 'SOL' | 'SKR') {
+    const mint = token === 'SOL' ? TOKENS.SOL.mint : TOKENS.SKR.mint;
+    dispatch({ type: 'settings/setFeeTokenMint', feeTokenMint: mint });
+    await StorageService.setItem(KEYS.FEE_TOKEN_MINT, mint);
+  }
+
   async function handleExportKey() {
     try {
       const isLocked = state.builtInWalletStatus === 'locked';
@@ -153,6 +161,13 @@ export function Settings({ navigation }: Props) {
           {hasHeliusKey() ? 'Present' : 'Missing'}
         </Text>
       </View>
+
+      <View style={styles.diagRow}>
+        <Text style={[styles.diagLabel, { color: colors.text }]}>Dflow Key:</Text>
+        <Text style={[styles.diagValue, { color: (hasDflowApiKey() || hasDflowProxy()) ? colors.success : colors.danger }]}>
+          {hasDflowProxy() ? 'Present (Proxy)' : hasDflowApiKey() ? 'Present' : 'Missing'}
+        </Text>
+      </View>
       
       <Text style={[styles.diagFooter, { color: colors.textSecondary }]}>
         Version: {Constants.expoConfig?.version || '1.0.0'}
@@ -188,6 +203,42 @@ export function Settings({ navigation }: Props) {
               disabled={!state.solanaMobileOwner}
             />
          </View>
+
+         <View style={{ marginTop: spacing[4] }}>
+            <Text style={{ color: colors.text, marginBottom: spacing[2] }}>Default Fee Token</Text>
+            <View style={{ flexDirection: 'row', gap: spacing[2] }}>
+              <TouchableOpacity
+                onPress={() => setDefaultFeeToken('SKR')}
+                style={{
+                  flex: 1,
+                  borderRadius: 10,
+                  borderWidth: 1.5,
+                  borderColor: state.feeTokenMint === TOKENS.SKR.mint ? colors.primary : colors.border,
+                  backgroundColor: state.feeTokenMint === TOKENS.SKR.mint ? colors.primary + '14' : colors.surface2,
+                  padding: spacing[3],
+                }}
+              >
+                <Text style={{ color: state.feeTokenMint === TOKENS.SKR.mint ? colors.primary : colors.text, fontWeight: '700', textAlign: 'center' }}>
+                  SKR
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setDefaultFeeToken('SOL')}
+                style={{
+                  flex: 1,
+                  borderRadius: 10,
+                  borderWidth: 1.5,
+                  borderColor: state.feeTokenMint === TOKENS.SOL.mint ? colors.primary : colors.border,
+                  backgroundColor: state.feeTokenMint === TOKENS.SOL.mint ? colors.primary + '14' : colors.surface2,
+                  padding: spacing[3],
+                }}
+              >
+                <Text style={{ color: state.feeTokenMint === TOKENS.SOL.mint ? colors.primary : colors.text, fontWeight: '700', textAlign: 'center' }}>
+                  SOL
+                </Text>
+              </TouchableOpacity>
+            </View>
+         </View>
       </Card>
 
       {/* Network Section */}
@@ -211,6 +262,13 @@ export function Settings({ navigation }: Props) {
         </View>
         <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
            Current: {networkMode}
+        </Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: spacing[3], lineHeight: 18 }}>
+          Bags Launch & Blast only works on{' '}
+          <Text style={{ fontWeight: '700', color: colors.text }}>mainnet</Text>
+          {' '}(Bags + partner PDA). On devnet you can still practice{' '}
+          <Text style={{ fontWeight: '700', color: colors.text }}>Bulk Blast</Text>
+          {' '}airdrops with free devnet SOL — no real-money launch.
         </Text>
       </Card>
 

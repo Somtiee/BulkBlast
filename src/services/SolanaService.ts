@@ -10,7 +10,6 @@ import {
 import { Buffer } from 'buffer';
 import { signTransaction } from './WalletService';
 import type { BuiltBatch } from './TransactionService';
-import { TokenRegistryService } from './TokenRegistryService';
 import { getHeliusRpcUrl } from '../config/helius';
 
 // Use a more robust RPC endpoint list (rotating public endpoints)
@@ -386,25 +385,6 @@ export async function getWalletPortfolio(ownerPublicKey: string, feeTokenMint: s
         resultTokens.push(val);
     }
   });
-
-  // Fetch metadata for other tokens
-  // Use a simple cache to avoid refetching same tokens
-  const tokensToFetch = resultTokens.filter(t => (!t.symbol || t.symbol === 'Unknown' || !t.uri));
-  
-  // Throttle fetching (chunks of 3)
-  for (let i = 0; i < tokensToFetch.length; i += 3) {
-      const chunk = tokensToFetch.slice(i, i + 3);
-      await Promise.all(chunk.map(async (t) => {
-         try {
-           const info = await TokenRegistryService.getByMint(t.mint);
-           if (info) {
-             t.symbol = info.symbol;
-             if (info.logoURI) t.uri = info.logoURI;
-           }
-         } catch {}
-      }));
-      if (i + 3 < tokensToFetch.length) await new Promise(r => setTimeout(r, 100));
-  }
 
   return {
     sol: solUi,

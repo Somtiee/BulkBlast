@@ -12,6 +12,9 @@ export function parseTextData(text: string): { address: string; amount?: string 
   const result: { address: string; amount?: string }[] = [];
 
   for (const line of lines) {
+    // Comments / notes for humans (e.g. "# Add more holders here")
+    if (line.startsWith('#')) continue;
+
     // Check for header-like line (skip it)
     if (line.toLowerCase().startsWith('address')) continue;
 

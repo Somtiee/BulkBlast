@@ -60,7 +60,7 @@ export function Input({ label, value, onChangeText, errorText, inputStyle, style
         onChangeText={onChangeText}
         autoCapitalize="none"
         autoCorrect={false}
-        placeholderTextColor={colors.textSecondary}
+        placeholderTextColor={colors.textPlaceholder}
         style={[styles.input, inputStyle, errorText ? styles.inputError : null]}
       />
       {errorText ? <Text style={styles.error}>{errorText}</Text> : null}

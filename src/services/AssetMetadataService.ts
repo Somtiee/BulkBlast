@@ -83,7 +83,7 @@ export const AssetMetadataService = {
             } else {
                meta = {
                  mint,
-                 symbol: mint.slice(0, 4) + '...' + mint.slice(-4),
+                  symbol: 'Unknown',
                  name: 'Unknown Token',
                  priceUsd: 0
                };

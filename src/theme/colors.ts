@@ -15,6 +15,8 @@ export const lightColors = {
   surface2: '#F0F2F5',
   text: '#0F172A',
   textSecondary: '#475569',
+  /** Hints / input placeholders — lower contrast than labels */
+  textPlaceholder: '#94a3b8',
   border: '#E2E8F0',
   ...common,
 } as const;
@@ -25,6 +27,8 @@ export const darkColors = {
   surface2: '#334155', // Slate 700
   text: '#e6fffa', // Light Mint/Cyan for high contrast
   textSecondary: '#99f6e4', // Teal 200 for secondary text
+  /** Placeholders — muted so fields don’t compete with labels */
+  textPlaceholder: '#4b635e',
   border: '#334155', // Slate 700
   ...common,
 } as const;

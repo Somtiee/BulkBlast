@@ -22,15 +22,15 @@ This guide explains how to generate Android APKs for testing (preview) and produ
 **NEVER** hardcode API keys in your source code. Use EAS Secrets to securely provide environment variables during the build process.
 
 ### Required Secrets
-- `EXPO_PUBLIC_JUPITER_API_KEY`: Your Jupiter Swap API Key.
-- `EXPO_PUBLIC_HELIUS_API_KEY`: Your Helius RPC API Key.
+- `EXPO_PUBLIC_PROXY_BASE_URL`: Public URL of your server-side proxy (e.g. Cloudflare Worker).
+
+No other third-party API keys should be set in Expo/EAS anymore; the proxy holds the real secrets server-side.
 
 ### How to Set Secrets
 You can set secrets using the EAS CLI:
 
 ```bash
-eas secret:create --scope project --name EXPO_PUBLIC_JUPITER_API_KEY --value "your_jupiter_key_here"
-eas secret:create --scope project --name EXPO_PUBLIC_HELIUS_API_KEY --value "your_helius_key_here"
+eas secret:create --scope project --name EXPO_PUBLIC_PROXY_BASE_URL --value "https://bulkblast-proxy.yourname.workers.dev"
 ```
 
 Or manage them in the [Expo Dashboard](https://expo.dev/accounts/[account]/projects/[project]/secrets).
@@ -79,5 +79,5 @@ npm run build-check
 ## Troubleshooting
 
 - **Build Fails**: Check the logs provided in the link by the EAS CLI.
-- **Missing Secrets**: Ensure all `EXPO_PUBLIC_` variables are set in EAS Secrets.
+- **Missing Secrets**: Ensure `EXPO_PUBLIC_PROXY_BASE_URL` is set in EAS Secrets (other API keys live in the proxy).
 - **Version Code Error**: If uploading to the Play Store fails due to version code, ensure `autoIncrement` is set to `true` in `eas.json` for the production profile, or manually increment `android.versionCode` in `app.json`.

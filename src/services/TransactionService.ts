@@ -215,16 +215,30 @@ export async function buildSplBatches(
   const batches = splitIntoBatches(validRecipients, batchSize);
   const builtBatches: BuiltBatch[] = [];
   let totalAmountUi = 0;
+  let totalRecipientsIncluded = 0;
 
   const { blockhash } = await connection.getLatestBlockhash();
 
   for (let i = 0; i < batches.length; i++) {
     const batchRecipients = batches[i];
+
+    // If auto-create is OFF, we should skip recipients that don't already have the ATA.
+    // This avoids Token program errors like `InvalidAccountData` on Transfer.
+    let includedRecipients = batchRecipients;
+    if (!createAta) {
+      const recipientPubkeys = batchRecipients.map((r) => new PublicKey(r.address));
+      const recipientATAs = recipientPubkeys.map((pk) => findAssociatedTokenAddress(pk, mintAddress));
+      const accounts = await connection.getMultipleAccountsInfo(recipientATAs);
+      includedRecipients = batchRecipients.filter((_, idx) => !!accounts[idx]);
+    }
+
+    if (includedRecipients.length === 0) continue;
+
     const tx = new Transaction();
     tx.recentBlockhash = blockhash;
     tx.feePayer = senderPublicKey;
 
-    for (const r of batchRecipients) {
+    for (const r of includedRecipients) {
       const recipientPubkey = new PublicKey(r.address);
       const recipientAta = findAssociatedTokenAddress(recipientPubkey, mintAddress);
 
@@ -243,9 +257,9 @@ export async function buildSplBatches(
       let amount: number;
       if (amountConfig.mode === 'equal') {
         if (decimals === 0) {
-           amount = amountConfig.equalNftCount;
+          amount = amountConfig.equalNftCount;
         } else {
-           amount = Number(amountConfig.equalAmountUi);
+          amount = Number(amountConfig.equalAmountUi);
         }
       } else {
         amount = Number(r.amount);
@@ -268,23 +282,33 @@ export async function buildSplBatches(
       );
     }
 
+    totalRecipientsIncluded += includedRecipients.length;
     builtBatches.push({
       index: i,
       tx,
-      recipients: batchRecipients.map(r => ({
+      recipients: includedRecipients.map((r) => ({
         ...r,
-        amount: amountConfig.mode === 'equal' 
-          ? (decimals === 0 ? amountConfig.equalNftCount.toString() : amountConfig.equalAmountUi)
-          : r.amount
+        amount:
+          amountConfig.mode === 'equal'
+            ? decimals === 0
+              ? amountConfig.equalNftCount.toString()
+              : amountConfig.equalAmountUi
+            : r.amount,
       })),
       kind: 'SPL',
     });
   }
 
+  if (builtBatches.length === 0) {
+    throw new Error(
+      'No recipient token accounts (ATAs) found for this mint. Turn on "Auto-create recipient token accounts" or include only recipients that already have the token ATA.'
+    );
+  }
+
   return {
     batches: builtBatches,
     summary: {
-      totalRecipients: validRecipients.length,
+      totalRecipients: totalRecipientsIncluded,
       totalAmountUi: totalAmountUi.toFixed(decimals),
     },
   };

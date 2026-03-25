@@ -28,6 +28,8 @@ export function ExecuteProgress({ navigation, route }: Props) {
   const [receipts, setReceipts] = useState<BatchReceipt[]>([]);
   const [dropReceipt, setDropReceipt] = useState<DropReceipt | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [batchesPage, setBatchesPage] = useState(0);
+  const BATCHES_PAGE_SIZE = 5;
 
   const recipientsToUse = useMemo(() => {
     if (state.giveawayConfig.enabled) {
@@ -141,11 +143,20 @@ export function ExecuteProgress({ navigation, route }: Props) {
   const validRecipientCount = recipientsToUse.filter((r) => r.isValid).length;
   const estimatedBatchCount = Math.ceil(Math.max(0, validRecipientCount) / Math.max(1, state.sendConfig.batchSize));
 
+  const addressesBlastedCount = result?.summary.totalRecipients ?? validRecipientCount;
+  const recipientsSelectedCount = validRecipientCount;
+  const addressesBlastedPct =
+    recipientsSelectedCount > 0 ? Math.min(100, Math.round((addressesBlastedCount / recipientsSelectedCount) * 100)) : 0;
+  const isDone = !!dropReceipt && !sending && !building;
+  const screenTitle = isDone ? 'Blasting Done' : 'Blasting…';
+
   async function onStartSend() {
     setError(null);
     setResult(null);
     setReceipts([]);
     setDropReceipt(null);
+    setExpanded(null);
+    setBatchesPage(0);
 
     if (!state.walletPublicKey || !state.walletMode) {
       setError('Wallet not ready');
@@ -254,6 +265,7 @@ export function ExecuteProgress({ navigation, route }: Props) {
         .map((r) => ({ id: r.id, address: r.address, amount: r.amount }));
       const uniq = new Map<string, { id: string; address: string; amount?: string }>();
       for (const r of sentRecipients) uniq.set(r.id, r);
+      const actualRecipientCount = uniq.size;
 
       const receipt: DropReceipt = {
         id: String(now) + '-' + Math.random().toString(36).slice(2, 8),
@@ -261,13 +273,13 @@ export function ExecuteProgress({ navigation, route }: Props) {
         network: getNetwork(),
         walletPublicKey: state.walletPublicKey,
         asset: state.selectedAsset,
-        recipientCount: recipientsToUse.length,
-        validRecipientCount,
+        recipientCount: actualRecipientCount,
+        validRecipientCount: actualRecipientCount,
         totalAmountUi: built.summary.totalAmountUi,
         recipients: Array.from(uniq.values()),
         fee: {
-          feeMint: state.feeTokenMint,
-          feeTokens: state.feeQuote?.feeTokens || '0',
+          feeMint: route.params?.feeTokenMint || state.feeTokenMint,
+          feeTokens: route.params?.feeAmountUi || state.feeQuote?.feeTokens || '0',
           discounted: !!(state.seekerDiscountEnabled && state.solanaMobileOwner),
         },
         batchSize: state.sendConfig.batchSize,
@@ -365,14 +377,35 @@ export function ExecuteProgress({ navigation, route }: Props) {
   }
 
   return (
-    <Screen title="Blasting…" subtitle={result ? `Batch ${Math.min(receipts.length + (sending ? 1 : 0), result.batches.length)} of ${result.batches.length}` : 'Preparing'}>
+    <Screen title={screenTitle} subtitle={result ? `Batch ${Math.min(receipts.length + (sending ? 1 : 0), result.batches.length)} of ${result.batches.length}` : 'Preparing'}>
       <Card>
         <Text style={styles.header}>Progress</Text>
         <Text style={styles.status}>
           {building ? 'Building transactions…' : sending ? `Sending ${result?.batches.length ?? estimatedBatchCount} batch(es)…` : dropReceipt ? 'Completed' : `Ready to send ${estimatedBatchCount} batch(es)`}
         </Text>
-        <Row label="Recipients" value={(result?.summary.totalRecipients ?? validRecipientCount).toString()} />
+        <Row label="Recipients selected" value={recipientsSelectedCount.toString()} />
+        <Row label="Addresses blasted" value={addressesBlastedCount.toString()} />
+        {state.selectedAsset?.kind === 'SPL' && !state.sendConfig.createRecipientAtaIfMissing && result ? (
+          <Row
+            label="Skipped (missing ATA)"
+            value={Math.max(0, recipientsSelectedCount - addressesBlastedCount).toString()}
+          />
+        ) : null}
+        <View style={{ marginTop: 6 }}>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${addressesBlastedPct}%`,
+                  backgroundColor: colors.success,
+                },
+              ]}
+            />
+          </View>
+        </View>
         <Divider />
+        <View style={{ marginTop: spacing[2] }} />
         <View style={styles.progressBar}>
           <View
             style={[
@@ -398,8 +431,31 @@ export function ExecuteProgress({ navigation, route }: Props) {
       {result ? (
         <Card>
           <Text style={styles.header}>Batches</Text>
+          {result.batches.length > BATCHES_PAGE_SIZE ? (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing[2] }}>
+              <Button
+                title="Prev"
+                onPress={() => setBatchesPage((p) => Math.max(0, p - 1))}
+                variant="secondary"
+                disabled={batchesPage <= 0}
+                style={{ flex: 1 }}
+              />
+              <Text style={{ color: colors.textSecondary, fontSize: 12, paddingHorizontal: spacing[2] }}>
+                Page {batchesPage + 1} / {Math.max(1, Math.ceil(result.batches.length / BATCHES_PAGE_SIZE))}
+              </Text>
+              <Button
+                title="Next"
+                onPress={() => setBatchesPage((p) => Math.min(Math.max(0, Math.ceil(result.batches.length / BATCHES_PAGE_SIZE) - 1), p + 1))}
+                variant="secondary"
+                disabled={batchesPage >= Math.ceil(result.batches.length / BATCHES_PAGE_SIZE) - 1}
+                style={{ flex: 1 }}
+              />
+            </View>
+          ) : null}
           <ScrollView style={{ maxHeight: 260 }}>
-            {result.batches.map((b) => {
+            {result.batches
+              .slice(batchesPage * BATCHES_PAGE_SIZE, (batchesPage + 1) * BATCHES_PAGE_SIZE)
+              .map((b) => {
               const r = receipts.find((x) => x.batchIndex === b.index);
               const ok = r?.ok;
               const sig = r?.signature;
@@ -447,7 +503,13 @@ export function ExecuteProgress({ navigation, route }: Props) {
                 const failedIds = result.batches
                   .filter((b) => !receipts.find((r) => r.batchIndex === b.index)?.ok)
                   .flatMap((b) => b.recipients.map((x) => x.id));
-                navigation.replace('ExecuteProgress', { confirmed: true, failedRecipientIds: failedIds });
+                navigation.replace('ExecuteProgress', {
+                  confirmed: true,
+                  failedRecipientIds: failedIds,
+                  feeTokenMint: route.params?.feeTokenMint,
+                  feeTokenSymbol: route.params?.feeTokenSymbol,
+                  feeAmountUi: route.params?.feeAmountUi,
+                });
               }}
               variant="outline"
               style={{ marginTop: spacing[2] }}

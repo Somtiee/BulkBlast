@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View, ViewStyle, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 import { spacing, typography, useTheme } from '../../theme';
 
@@ -11,10 +12,24 @@ export type ScreenProps = {
   footer?: React.ReactNode;
   scroll?: boolean;
   contentStyle?: ViewStyle;
+  /**
+   * Android-only: pull down to "refresh" by popping to the top of the current stack.
+   */
+  pullToHome?: boolean;
 };
 
-export function Screen({ title, subtitle, children, footer, scroll = true, contentStyle }: ScreenProps) {
+export function Screen({
+  title,
+  subtitle,
+  children,
+  footer,
+  scroll = true,
+  contentStyle,
+  pullToHome = true,
+}: ScreenProps) {
   const { colors } = useTheme();
+  const navigation = useNavigation<any>();
+  const [refreshing, setRefreshing] = useState(false);
 
   const styles = useMemo(
     () =>
@@ -77,10 +92,31 @@ export function Screen({ title, subtitle, children, footer, scroll = true, conte
     </View>
   );
 
+  function onRefresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      navigation?.popToTop?.();
+    } catch {
+      // ignore
+    } finally {
+      // UX: keep it snappy; no async work required.
+      setTimeout(() => setRefreshing(false), 350);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {scroll ? (
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            Platform.OS === 'android' && pullToHome ? (
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            ) : undefined
+          }
+        >
           {content}
         </ScrollView>
       ) : (

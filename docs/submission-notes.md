@@ -15,10 +15,9 @@
 
 ## 2. Secrets Management
 - **Never** commit `.env` files.
-- **Always** ensure secrets are updated in EAS before building:
+- **Always** ensure proxy base URL is updated in EAS before building:
   ```bash
-  eas secret:create --scope project --name EXPO_PUBLIC_JUPITER_API_KEY --value "..."
-  eas secret:create --scope project --name EXPO_PUBLIC_HELIUS_API_KEY --value "..."
+  eas secret:create --scope project --name EXPO_PUBLIC_PROXY_BASE_URL --value "https://bulkblast-proxy.yourname.workers.dev"
   ```
 
 ## 3. Store Listing

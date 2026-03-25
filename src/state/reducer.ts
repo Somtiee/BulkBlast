@@ -33,6 +33,7 @@ export const initialAppState: AppState = {
   selectedAsset: null,
   assetBalance: null,
   feeQuote: null,
+  launchBlastFreeFeeAvailable: false,
 };
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -69,6 +70,11 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         treasuryAddress: action.treasuryAddress,
+      };
+    case 'settings/setFeeTokenMint':
+      return {
+        ...state,
+        feeTokenMint: action.feeTokenMint,
       };
     case 'settings/toggleSeekerDiscount':
       return {
@@ -187,6 +193,10 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, feeQuote: action.quote };
     case 'fee/clear':
       return { ...state, feeQuote: null };
+    case 'promo/armLaunchBlastFreeFee':
+      return { ...state, launchBlastFreeFeeAvailable: true };
+    case 'promo/consumeLaunchBlastFreeFee':
+      return { ...state, launchBlastFreeFeeAvailable: false };
     default: {
       const exhaustive: never = action;
       return state;

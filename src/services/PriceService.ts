@@ -1,6 +1,5 @@
-import { StorageService } from './StorageService';
+import { PROXY_CONFIG, hasProxyBaseUrl } from '../config/proxy';
 
-const JUPITER_PRICE_API_V2 = 'https://api.jup.ag/price/v2';
 const COINGECKO_API = 'https://api.coingecko.com/api/v3';
 
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
@@ -39,28 +38,32 @@ export const PriceService = {
 
     if (missingMints.length === 0) return results;
 
-    // 2. Fetch from Jupiter (Batch)
-    // Jupiter supports up to 100 ids per request
-    const chunkSize = 100;
+    // 2. Fetch from proxy (worker injects API key server-side)
+    // Price API V3 supports up to 50 ids per request.
+    const chunkSize = 50;
+    const jupiterPriceProxyBase = hasProxyBaseUrl() ? `${PROXY_CONFIG.BASE_URL}/jupiter/price/v3` : '';
     for (let i = 0; i < missingMints.length; i += chunkSize) {
       const chunk = missingMints.slice(i, i + chunkSize);
       const ids = chunk.join(',');
       
       try {
-        const url = `${JUPITER_PRICE_API_V2}?ids=${ids}`;
+        if (!jupiterPriceProxyBase) break;
+        const url = `${jupiterPriceProxyBase}?ids=${encodeURIComponent(ids)}`;
         const res = await fetch(url);
         
         if (res.ok) {
           const json = await res.json();
-          if (json && json.data) {
-             for (const mint of chunk) {
-                const item = json.data[mint];
-                if (item && item.price) {
-                   const price = parseFloat(item.price);
-                   results[mint] = price;
-                   priceCache.set(mint, { price, timestamp: now });
-                }
-             }
+          // V3 returns { [mint]: { usdPrice: number|string, ... } }
+          for (const mint of chunk) {
+            const item = json?.[mint];
+            const usdPrice = item?.usdPrice;
+            if (usdPrice != null) {
+              const price = typeof usdPrice === 'string' ? parseFloat(usdPrice) : Number(usdPrice);
+              if (!Number.isNaN(price)) {
+                results[mint] = price;
+                priceCache.set(mint, { price, timestamp: now });
+              }
+            }
           }
         }
       } catch (e) {
@@ -69,7 +72,7 @@ export const PriceService = {
     }
 
     // 3. Fallback to CoinGecko for anything still missing (especially SOL if Jupiter failed)
-    const stillMissing = missingMints.filter(m => results[m] === undefined);
+    const stillMissing = missingMints.filter((m) => results[m] === undefined);
     if (stillMissing.length > 0) {
        // Only try CoinGecko for major tokens to avoid rate limits on random mints
        const isSolMissing = stillMissing.includes(SOL_MINT);

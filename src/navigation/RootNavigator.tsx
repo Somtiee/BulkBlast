@@ -17,6 +17,9 @@ import { ScanRecipients } from '../screens/createDrop/ScanRecipients';
 import { Review } from '../screens/createDrop/Review';
 import { ExecuteProgress } from '../screens/createDrop/ExecuteProgress';
 import { SwapModal } from '../screens/createDrop/SwapModal';
+import { LaunchBlastScreen } from '../screens/LaunchBlastScreen';
+import { LaunchBlastSuccessScreen } from '../screens/LaunchBlastSuccessScreen';
+import { LaunchBlastHistoryScreen } from '../screens/LaunchBlastHistoryScreen';
 import { ReceiptDetails } from '../screens/history/ReceiptDetails';
 import { History } from '../screens/history/History';
 import { Settings } from '../screens/settings/Settings';
@@ -26,6 +29,7 @@ import { ActivityIndicator, View } from 'react-native';
 const Root = createNativeStackNavigator<RootStackParamList>();
 const Auth = createNativeStackNavigator<AuthStackParamList>();
 const CreateDropStack = createNativeStackNavigator<CreateDropStackParamList>();
+const LaunchStack = createNativeStackNavigator<CreateDropStackParamList>();
 const Tabs = createBottomTabNavigator<MainTabsParamList>();
 
 function screenHeader(title: string): NativeStackNavigationOptions {
@@ -53,8 +57,8 @@ function AuthStackNavigator() {
 
 function CreateDropStackNavigator() {
   return (
-    <CreateDropStack.Navigator>
-      <CreateDropStack.Screen name="CreateDrop" component={CreateDrop} options={screenHeader('Create Drop')} />
+    <CreateDropStack.Navigator initialRouteName="CreateDrop">
+      <CreateDropStack.Screen name="CreateDrop" component={CreateDrop} options={screenHeader('Blast')} />
       <CreateDropStack.Screen name="AssetSelect" component={AssetSelect} options={screenHeader('Select Asset')} />
       <CreateDropStack.Screen name="ScanRecipients" component={ScanRecipients} options={{ headerShown: false }} />
       <CreateDropStack.Screen name="Review" component={Review} options={screenHeader('Review')} />
@@ -65,7 +69,55 @@ function CreateDropStackNavigator() {
       />
       <CreateDropStack.Screen name="SwapModal" component={SwapModal} options={screenHeader('Swap')} />
       <CreateDropStack.Screen name="ReceiptDetails" component={ReceiptDetails} options={screenHeader('Receipt')}/>
+      <CreateDropStack.Screen
+        name="LaunchBlast"
+        component={LaunchBlastScreen}
+        options={screenHeader('Launch & Blast')}
+      />
+      <CreateDropStack.Screen
+        name="LaunchBlastSuccess"
+        component={LaunchBlastSuccessScreen}
+        options={screenHeader('Launched')}
+      />
+      <CreateDropStack.Screen
+        name="LaunchBlastHistory"
+        component={LaunchBlastHistoryScreen}
+        options={screenHeader('Launch History')}
+      />
     </CreateDropStack.Navigator>
+  );
+}
+
+function LaunchStackNavigator() {
+  return (
+    <LaunchStack.Navigator initialRouteName="LaunchBlast">
+      <LaunchStack.Screen name="CreateDrop" component={CreateDrop} options={screenHeader('Blast')} />
+      <LaunchStack.Screen name="AssetSelect" component={AssetSelect} options={screenHeader('Select Asset')} />
+      <LaunchStack.Screen name="ScanRecipients" component={ScanRecipients} options={{ headerShown: false }} />
+      <LaunchStack.Screen name="Review" component={Review} options={screenHeader('Review')} />
+      <LaunchStack.Screen
+        name="ExecuteProgress"
+        component={ExecuteProgress}
+        options={screenHeader('Executing')}
+      />
+      <LaunchStack.Screen name="SwapModal" component={SwapModal} options={screenHeader('Swap')} />
+      <LaunchStack.Screen name="ReceiptDetails" component={ReceiptDetails} options={screenHeader('Receipt')} />
+      <LaunchStack.Screen
+        name="LaunchBlast"
+        component={LaunchBlastScreen}
+        options={screenHeader('Launch & Blast')}
+      />
+      <LaunchStack.Screen
+        name="LaunchBlastSuccess"
+        component={LaunchBlastSuccessScreen}
+        options={screenHeader('Launched')}
+      />
+      <LaunchStack.Screen
+        name="LaunchBlastHistory"
+        component={LaunchBlastHistoryScreen}
+        options={screenHeader('Launch History')}
+      />
+    </LaunchStack.Navigator>
   );
 }
 
@@ -94,6 +146,8 @@ function MainTabsNavigator() {
           let icon = '📦';
           if (route.name === 'CreateDropStack') {
             icon = '🚀';
+          } else if (route.name === 'LaunchStack') {
+            icon = '🪙';
           } else if (route.name === 'History') {
             icon = '📜';
           } else if (route.name === 'Settings') {
@@ -106,7 +160,12 @@ function MainTabsNavigator() {
       <Tabs.Screen
         name="CreateDropStack"
         component={CreateDropStackNavigator}
-        options={{ tabBarLabel: 'Create' }}
+        options={{ tabBarLabel: 'Blast' }}
+      />
+      <Tabs.Screen
+        name="LaunchStack"
+        component={LaunchStackNavigator}
+        options={{ tabBarLabel: 'Launch' }}
       />
       <Tabs.Screen
         name="History"

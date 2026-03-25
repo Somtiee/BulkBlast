@@ -7,6 +7,7 @@ import nacl from 'tweetnacl';
 import * as naclUtil from 'tweetnacl-util';
 import bs58 from 'bs58';
 import { Buffer } from 'buffer';
+import { StorageService, KEYS } from './StorageService';
 
 // --- SecureStore Adapter for Web Support ---
 const SecureStore = {
@@ -41,6 +42,27 @@ const KEY_PUBLIC_KEY = SECURE_STORE_PREFIX + 'public_key';
 
 // In-memory wallet instance (cleared on lock)
 let currentKeypair: Keypair | null = null;
+
+type BuiltInUnlockListener = (publicKey: string) => void;
+const builtInUnlockListeners = new Set<BuiltInUnlockListener>();
+
+/** Register to sync app state when the user unlocks (e.g. biometric during signing). */
+export function registerBuiltInUnlockListener(fn: BuiltInUnlockListener): () => void {
+  builtInUnlockListeners.add(fn);
+  return () => {
+    builtInUnlockListeners.delete(fn);
+  };
+}
+
+function notifyBuiltInUnlocked(publicKey: string) {
+  builtInUnlockListeners.forEach((fn) => {
+    try {
+      fn(publicKey);
+    } catch {
+      /* ignore listener errors */
+    }
+  });
+}
 
 // Helper to encode/decode
 const encodeBase64 = (arr: Uint8Array) => naclUtil.encodeBase64(arr);
@@ -197,22 +219,27 @@ export async function unlockBuiltIn(): Promise<{ publicKey: string }> {
     return { publicKey: currentKeypair.publicKey.toBase58() };
   }
 
-  const hasHardware = await LocalAuthentication.hasHardwareAsync();
-  const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-
-  if (hasHardware && isEnrolled) {
+  // Require device authentication (biometrics and/or device PIN/password) before loading keys — same idea as Phantom.
+  if (Platform.OS !== 'web') {
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Unlock your wallet',
+      promptMessage: 'Unlock your wallet (fingerprint, face, or device passcode)',
       fallbackLabel: 'Use Passcode',
+      cancelLabel: 'Cancel',
+      disableDeviceFallback: false,
     });
     if (!result.success) {
-      throw new Error('Authentication failed');
+      throw new Error(
+        result.error === 'user_cancel' ? 'Authentication cancelled' : 'Authentication failed'
+      );
     }
   }
 
   const kp = await loadKeypairFromStorage();
   currentKeypair = kp;
-  return { publicKey: kp.publicKey.toBase58() };
+  const publicKey = kp.publicKey.toBase58();
+  await StorageService.setItem(KEYS.WALLET_LOCKED, 'false');
+  notifyBuiltInUnlocked(publicKey);
+  return { publicKey };
 }
 
 export async function unlockBuiltInSilently(): Promise<{ publicKey: string }> {
@@ -226,6 +253,9 @@ export async function unlockBuiltInSilently(): Promise<{ publicKey: string }> {
 }
 
 export async function signTransaction(transaction: Transaction | VersionedTransaction): Promise<Transaction | VersionedTransaction> {
+  if (!currentKeypair) {
+    await unlockBuiltIn();
+  }
   if (!currentKeypair) {
     throw new Error('Wallet is locked');
   }
@@ -243,6 +273,9 @@ export async function signTransaction(transaction: Transaction | VersionedTransa
 }
 
 export async function signVersionedTransaction(transaction: VersionedTransaction): Promise<VersionedTransaction> {
+  if (!currentKeypair) {
+    await unlockBuiltIn();
+  }
   if (!currentKeypair) {
     throw new Error('Wallet is locked');
   }
@@ -275,7 +308,10 @@ export async function connectAdapter(): Promise<{ publicKey: string }> {
   throw new Error('External wallet connection is not implemented yet. Use the built-in wallet.');
 }
 
-export function exportPrivateKeyBase58(): string {
+export async function exportPrivateKeyBase58(): Promise<string> {
+  if (!currentKeypair) {
+    await unlockBuiltIn();
+  }
   if (!currentKeypair) {
     throw new Error('Wallet is locked');
   }

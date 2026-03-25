@@ -14,8 +14,10 @@ export type FeeQuote = {
   recipientCount: number;
   feeUsd: string;
   discountedFeeUsd: string;
-  feeTokens: string;
+  feeTokens: string; // legacy field, mirrors feeAmountUi
   rateUsdPerToken: string;
+  feeAmountUi?: string;
+  feeTokenSymbol?: 'SKR' | 'SOL';
 };
 
 export type SendConfig = {
@@ -51,6 +53,8 @@ export type AppState = {
   selectedAsset: SelectedAsset | null;
   assetBalance: AssetBalance | null;
   feeQuote: FeeQuote | null;
+  /** Armed only when user taps BLAST NOW from Launch success. Consumed after one free execution. */
+  launchBlastFreeFeeAvailable: boolean;
 };
 
 export type AppAction =
@@ -61,6 +65,7 @@ export type AppAction =
   | { type: 'wallet/lockedBuiltIn' }
   | { type: 'wallet/reset' }
   | { type: 'settings/setTreasuryAddress'; treasuryAddress: string }
+  | { type: 'settings/setFeeTokenMint'; feeTokenMint: string }
   | { type: 'settings/toggleSeekerDiscount' }
   | { type: 'settings/setSolanaMobileOwner'; value: boolean }
   | { type: 'settings/setNetwork'; network: 'devnet' | 'mainnet-beta' } // Added action
@@ -83,4 +88,6 @@ export type AppAction =
   | { type: 'asset/setBalance'; balance: AssetBalance }
   | { type: 'asset/clear' }
   | { type: 'fee/setQuote'; quote: FeeQuote }
-  | { type: 'fee/clear' };
+  | { type: 'fee/clear' }
+  | { type: 'promo/armLaunchBlastFreeFee' }
+  | { type: 'promo/consumeLaunchBlastFreeFee' };

@@ -3,7 +3,7 @@
 This document serves as the final technical gate before cutting a release build.
 
 ## 1. Environment Configuration
-- [ ] **Secrets Injection**: Ensure `EXPO_PUBLIC_JUPITER_API_KEY` and `EXPO_PUBLIC_HELIUS_API_KEY` are set in EAS Secrets.
+- [ ] **Proxy Base URL**: Ensure `EXPO_PUBLIC_PROXY_BASE_URL` is set in EAS Secrets.
 - [ ] **Network Default**: Verify the default network in `src/config/index.ts` or `SolanaService.ts` is set to `mainnet-beta` (or that the user is prompted to switch).
 - [ ] **No Hardcoded Secrets**: Scan codebase for any accidentally committed API keys.
 
