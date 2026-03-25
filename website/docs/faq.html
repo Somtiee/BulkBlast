@@ -17,7 +17,7 @@
             <span>BulkBlast Docs</span>
         </a>
         <div class="header-actions">
-            <a href="https://github.com/Somtiee/Bulkblast" target="_blank" class="header-link">GitHub</a>
+            <a href="https://github.com/Somtiee/BulkBlast" target="_blank" class="header-link">GitHub</a>
             <a href="https://x.com/Bulkblast_app" target="_blank" class="header-link">Twitter</a>
             <button class="mobile-menu-toggle">☰</button>
         </div>
@@ -33,7 +33,7 @@
         <div class="sidebar-group">
             <div class="sidebar-title">Features</div>
             <a href="fees-and-payments.html" class="sidebar-link">Fees & Payments</a>
-            <a href="swaps.html" class="sidebar-link">Swaps (Jupiter)</a>
+            <a href="swaps.html" class="sidebar-link">Swaps & Routing</a>
             <a href="nft-support.html" class="sidebar-link">NFT Support</a>
         </div>
         <div class="sidebar-group">
@@ -45,7 +45,7 @@
 
     <main class="docs-content">
         <h1>Frequently Asked Questions</h1>
-        <p class="subtitle">Common questions about BulkBlast functionality, safety, and fees.</p>
+        <p class="subtitle">Common questions about BulkBlast functionality, launch flow, safety, and fees.</p>
 
         <details class="faq-item">
             <summary>What assets can I send with BulkBlast?</summary>
@@ -69,16 +69,30 @@
         </details>
 
         <details class="faq-item">
-            <summary>Why do fees use SKR?</summary>
+            <summary>Can I pay service fees in SOL or SKR?</summary>
             <div class="faq-content">
-                <p>Using SEEKER (SKR) allows us to align with the Solana Mobile ecosystem and offer native discounts to mobile users. It simplifies fee processing and supports the community.</p>
+                <p>Yes. BulkBlast supports both fee modes. You can pay in SKR or SOL at checkout, and the app shows the exact amount before you confirm.</p>
             </div>
         </details>
 
         <details class="faq-item">
             <summary>How does the Solana Mobile discount work?</summary>
             <div class="faq-content">
-                <p>If you are using a Solana Mobile device (Saga or Seeker), the app automatically detects this and applies a <strong>50% discount</strong> to all BulkBlast service fees.</p>
+                <p>If you are using a Solana Mobile device (Saga or Seeker), the app automatically detects this and applies a <strong>50% discount</strong> to BulkBlast service fees in both SKR and SOL modes.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>What is Launch &amp; Blast with BAGS?</summary>
+            <div class="faq-content">
+                <p>You can launch a token via BAGS in-app, then tap BLAST NOW to move directly into bulk distribution with the new token pre-filled.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>Do launch users get a free blast?</summary>
+            <div class="faq-content">
+                <p>There is a one-time promo path: if you launch and immediately hit BLAST NOW, that next blast can be fee-free once. If you skip the handoff, the promo is not retained.</p>
             </div>
         </details>
 
@@ -92,7 +106,14 @@
         <details class="faq-item">
             <summary>Are swaps done inside the app?</summary>
             <div class="faq-content">
-                <p>Yes, BulkBlast integrates Jupiter Aggregator directly, allowing you to swap assets without leaving the app. This is perfect for quickly acquiring SKR for fees.</p>
+                <p>Yes. BulkBlast integrates Jupiter and supports DFLOW routing paths, allowing you to swap assets without leaving the app.</p>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>Are partner/API keys exposed in the APK?</summary>
+            <div class="faq-content">
+                <p>No. Sensitive third-party keys are held server-side in the proxy. The app calls proxy endpoints and does not bundle private partner API keys in the client.</p>
             </div>
         </details>
 

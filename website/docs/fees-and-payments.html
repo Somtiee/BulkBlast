@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fees & Payments - BulkBlast Docs</title>
-    <meta name="description" content="Transparent fee structure for BulkBlast, including SKR token payments and Solana Mobile discounts.">
+    <meta name="description" content="Transparent BulkBlast fee model with support for both SKR and SOL payments, plus Solana Mobile discounts.">
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="assets/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
             <span>BulkBlast Docs</span>
         </a>
         <div class="header-actions">
-            <a href="https://github.com/Somtiee/Bulkblast" target="_blank" class="header-link">GitHub</a>
+            <a href="https://github.com/Somtiee/BulkBlast" target="_blank" class="header-link">GitHub</a>
             <a href="https://x.com/Bulkblast_app" target="_blank" class="header-link">Twitter</a>
             <button class="mobile-menu-toggle">☰</button>
         </div>
@@ -33,7 +33,7 @@
         <div class="sidebar-group">
             <div class="sidebar-title">Features</div>
             <a href="fees-and-payments.html" class="sidebar-link active">Fees & Payments</a>
-            <a href="swaps.html" class="sidebar-link">Swaps (Jupiter)</a>
+            <a href="swaps.html" class="sidebar-link">Swaps & Routing</a>
             <a href="nft-support.html" class="sidebar-link">NFT Support</a>
         </div>
         <div class="sidebar-group">
@@ -45,11 +45,11 @@
 
     <main class="docs-content">
         <h1>Fees & Payments</h1>
-        <p class="subtitle">Understand BulkBlast's transparent fee structure, powered by SEEKER (SKR) tokens.</p>
+        <p class="subtitle">Understand BulkBlast's transparent fee structure, with payment options in both SKR and SOL.</p>
 
         <div class="callout callout-info">
             <h4>Solana Mobile Discount</h4>
-            <p><strong>Exclusive Benefit:</strong> Solana Mobile (Saga / Seeker) users automatically receive a <strong>50% discount</strong> on all BulkBlast fees.</p>
+            <p><strong>Exclusive Benefit:</strong> Solana Mobile (Saga / Seeker) users automatically receive a <strong>50% discount</strong> on all BulkBlast service fees (SKR and SOL modes).</p>
         </div>
 
         <h2 id="fee-structure">Fee Tiers</h2>
@@ -60,39 +60,46 @@
                 <thead>
                     <tr>
                         <th>Recipients</th>
-                        <th>Fee (in SKR)</th>
-                        <th>Solana Mobile Fee</th>
+                        <th>Base Fee (SKR mode, USD value)</th>
+                        <th>Base Fee (SOL mode, USD value)</th>
+                        <th>Solana Mobile (50% OFF)</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>1 - 49</td>
-                        <td>$0.50 equivalent</td>
-                        <td><strong>$0.25 equivalent</strong></td>
+                        <td>$0.05</td>
+                        <td>$0.065</td>
+                        <td><strong>$0.025 / $0.0325</strong></td>
                     </tr>
                     <tr>
                         <td>50 - 499</td>
-                        <td>$1.00 equivalent</td>
-                        <td><strong>$0.50 equivalent</strong></td>
+                        <td>$0.10</td>
+                        <td>$0.14</td>
+                        <td><strong>$0.05 / $0.07</strong></td>
                     </tr>
                     <tr>
                         <td>500+</td>
-                        <td>$2.00 equivalent</td>
-                        <td><strong>$1.00 equivalent</strong></td>
+                        <td>$0.20</td>
+                        <td>$0.30</td>
+                        <td><strong>$0.10 / $0.15</strong></td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <p><em>*Fees are payable in SEEKER (SKR) tokens. The USD equivalent is calculated at the time of transaction.</em></p>
+        <p><em>*These are USD-denominated service fees. At checkout, BulkBlast calculates token amount from live price and lets you pay in SKR or SOL.</em></p>
 
-        <h2 id="why-skr">Why SEEKER (SKR)?</h2>
-        <p>BulkBlast utilizes the SEEKER (SKR) token for fee payments to align with the Solana Mobile ecosystem. This allows us to:</p>
+        <h2 id="why-skr">Why offer both SKR and SOL?</h2>
+        <p>BulkBlast supports both options so users can execute quickly without leaving flow. This allows us to:</p>
         <ul>
-            <li>Offer native discounts to mobile users.</li>
-            <li>Streamline fee processing.</li>
-            <li>Support the broader Solana community.</li>
+            <li>Offer default SKR-aligned pricing for Solana Mobile users.</li>
+            <li>Let users pay in SOL when SKR balance is unavailable.</li>
+            <li>Keep fees transparent via USD-based tiers.</li>
         </ul>
+
+        <h2 id="launch-blast-promo">Launch & Blast Promo</h2>
+        <p>If a user launches through BAGS and immediately taps <strong>BLAST NOW</strong>, that next blast can be fee-free once. If the user skips the BLAST action, promo eligibility is not retained.</p>
 
         <h2 id="treasury">Treasury & Transparency</h2>
         <p>All collected fees are routed directly to the BulkBlast treasury wallet. These funds are used strictly for:</p>
