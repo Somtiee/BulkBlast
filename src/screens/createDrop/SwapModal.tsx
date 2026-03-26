@@ -438,9 +438,8 @@ export function SwapModal({ navigation }: Props) {
         throw new Error('Please use built-in wallet for swaps currently.');
       }
 
-      // 4. Confirm
-      const confirmation = await connection.confirmTransaction(signature, 'confirmed');
-      if (confirmation.value.err) throw new Error('Swap transaction failed on chain.');
+      // 4. Confirm (robust: timeout + polling fallback for mobile/RPC quirks)
+      await confirmSignatureRobust(connection, signature);
 
       // Success modal w/ animation + confetti
       setSwapSuccessSignature(signature);
@@ -1011,4 +1010,55 @@ function formatRawAmount(rawAmount: string, decimals: number): string {
   const raw = parseInt(rawAmount || '0', 10);
   if (!raw || Number.isNaN(raw)) return '0.00';
   return (raw / Math.pow(10, decimals)).toFixed(4);
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Mobile networks/RPC websockets can leave `confirmTransaction` hanging even when
+ * a swap lands on-chain. We add timeout + polling fallback to keep UI state correct.
+ */
+async function confirmSignatureRobust(
+  connection: Connection,
+  signature: string,
+  opts?: { timeoutMs?: number; pollMs?: number }
+): Promise<void> {
+  const timeoutMs = opts?.timeoutMs ?? 35000;
+  const pollMs = opts?.pollMs ?? 1500;
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Confirmation timeout reached')), timeoutMs)
+  );
+
+  try {
+    const confirmation = await Promise.race([
+      connection.confirmTransaction(signature, 'confirmed'),
+      timeoutPromise,
+    ]);
+    if (confirmation.value.err) {
+      throw new Error('Swap transaction failed on chain.');
+    }
+    return;
+  } catch {
+    // Fallback to status polling below.
+  }
+
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const statuses = await connection.getSignatureStatuses([signature], {
+      searchTransactionHistory: true,
+    });
+    const status = statuses.value[0];
+    if (status?.err) {
+      throw new Error('Swap transaction failed on chain.');
+    }
+    if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') {
+      return;
+    }
+    await sleep(pollMs);
+  }
+
+  throw new Error(
+    `Swap submitted but confirmation is delayed. Signature: ${signature.slice(0, 8)}...`
+  );
 }
