@@ -126,6 +126,7 @@ export function SwapModal({ navigation }: Props) {
   // Swap success UX
   const [swapSuccessVisible, setSwapSuccessVisible] = useState(false);
   const [swapSuccessSignature, setSwapSuccessSignature] = useState('');
+  const [swapSuccessMode, setSwapSuccessMode] = useState<'confirmed' | 'submitted'>('confirmed');
   const successScale = useRef(new Animated.Value(0.9)).current;
   const successFade = useRef(new Animated.Value(0)).current;
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -438,11 +439,20 @@ export function SwapModal({ navigation }: Props) {
         throw new Error('Please use built-in wallet for swaps currently.');
       }
 
-      // 4. Confirm (robust: timeout + polling fallback for mobile/RPC quirks)
-      await confirmSignatureRobust(connection, signature);
+      // 4. Fast UX path: don't block UI on slow "confirmed" finality.
+      const fast = await waitForFastSignatureAcceptance(connection, signature, {
+        timeoutMs: 8000,
+        pollMs: 600,
+      });
+
+      // Continue deeper confirmation in background (non-blocking for user UX).
+      void confirmSignatureRobust(connection, signature).catch((err) => {
+        console.warn('Background confirmation delayed/failed', err);
+      });
 
       // Success modal w/ animation + confetti
       setSwapSuccessSignature(signature);
+      setSwapSuccessMode(fast.accepted ? 'confirmed' : 'submitted');
       setSwapSuccessVisible(true);
       setSignatureCopied(false);
       Animated.parallel([
@@ -463,7 +473,7 @@ export function SwapModal({ navigation }: Props) {
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
       successTimerRef.current = setTimeout(() => {
         setSwapSuccessVisible(false);
-      }, 2400);
+      }, fast.accepted ? 2400 : 3200);
 
       loadBalances(); // Refresh balances
       setAmount('');
@@ -664,7 +674,7 @@ export function SwapModal({ navigation }: Props) {
            ) : !amount ? (
               <Button title="Enter Amount" disabled variant="secondary" onPress={() => {}} />
            ) : routeQuotes.length > 0 ? (
-              <Button title={swapping ? "Swapping..." : "Swap"} onPress={onSwap} disabled={swapping} variant="primary" style={{ height: 56 }} textStyle={{ fontSize: 18 }} />
+             <Button title={swapping ? "Submitting..." : "Swap"} onPress={onSwap} disabled={swapping} variant="primary" style={{ height: 56 }} textStyle={{ fontSize: 18 }} />
            ) : (
               <Button title={loading ? "Getting Quote..." : "Get Quote"} disabled variant="secondary" onPress={() => {}} />
            )}
@@ -780,7 +790,14 @@ export function SwapModal({ navigation }: Props) {
           >
             <ConfettiBurst density={44} />
             <View style={{ alignItems: 'center', paddingTop: 6 }}>
-              <Text style={[styles.successTitle, { color: colors.text }]}>Swap Success</Text>
+              <Text style={[styles.successTitle, { color: colors.text }]}>
+                {swapSuccessMode === 'confirmed' ? 'Swap Success' : 'Swap Submitted'}
+              </Text>
+              {swapSuccessMode === 'submitted' ? (
+                <Text style={[styles.successSub, { color: colors.textSecondary }]}>
+                  Transaction was sent. Final confirmation may continue briefly in background.
+                </Text>
+              ) : null}
               {swapSuccessSignature ? (
                 <>
                   <TouchableOpacity
@@ -1013,6 +1030,36 @@ function formatRawAmount(rawAmount: string, decimals: number): string {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Fast-path acceptance for UX. We consider "processed" enough to release the
+ * blocking spinner; deep confirmation keeps running in background.
+ */
+async function waitForFastSignatureAcceptance(
+  connection: Connection,
+  signature: string,
+  opts?: { timeoutMs?: number; pollMs?: number }
+): Promise<{ accepted: boolean; status: 'processed' | 'confirmed' | 'finalized' | 'timeout' }> {
+  const timeoutMs = opts?.timeoutMs ?? 8000;
+  const pollMs = opts?.pollMs ?? 600;
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    const statuses = await connection.getSignatureStatuses([signature], {
+      searchTransactionHistory: true,
+    });
+    const status = statuses.value[0];
+    if (status?.err) {
+      throw new Error('Swap transaction failed on chain.');
+    }
+    if (status?.confirmationStatus === 'finalized') return { accepted: true, status: 'finalized' };
+    if (status?.confirmationStatus === 'confirmed') return { accepted: true, status: 'confirmed' };
+    if (status?.confirmationStatus === 'processed') return { accepted: true, status: 'processed' };
+    await sleep(pollMs);
+  }
+
+  return { accepted: false, status: 'timeout' };
+}
 
 /**
  * Mobile networks/RPC websockets can leave `confirmTransaction` hanging even when
