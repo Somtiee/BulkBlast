@@ -78,6 +78,26 @@ export class BagsLaunchServiceError extends Error {
   }
 }
 
+const BAGS_HTTP_TIMEOUT_MS = 20000;
+const BAGS_CONFIRM_TIMEOUT_MS = 25000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = BAGS_HTTP_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function requireLaunchConfig(): void {
   if (!BAGS_PROXY_BASE_URL.trim()) {
     throw new BagsLaunchServiceError(
@@ -145,7 +165,7 @@ type FeeShareConfigV2Response = {
 async function postFeeShareConfig(
   body: Record<string, unknown>,
 ): Promise<FeeShareConfigV2Response> {
-  const response = await fetch(`${BAGS_PROXY_BASE_URL}/fee-share/config`, {
+  const response = await fetchWithTimeout(`${BAGS_PROXY_BASE_URL}/fee-share/config`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -179,6 +199,57 @@ async function postFeeShareConfig(
   return inner as FeeShareConfigV2Response;
 }
 
+async function confirmLaunchAuxTx(
+  connection: Connection,
+  signature: string,
+  blockhash: { blockhash: string; lastValidBlockHeight: number },
+): Promise<void> {
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Aux tx confirmation timeout')), BAGS_CONFIRM_TIMEOUT_MS),
+  );
+
+  try {
+    const confirmation = await Promise.race([
+      connection.confirmTransaction(
+        {
+          signature,
+          blockhash: blockhash.blockhash,
+          lastValidBlockHeight: blockhash.lastValidBlockHeight,
+        },
+        'confirmed',
+      ),
+      timeoutPromise,
+    ]);
+    if (confirmation.value.err) {
+      throw new Error('Aux tx failed on chain');
+    }
+    return;
+  } catch {
+    // fall through to status polling
+  }
+
+  const started = Date.now();
+  while (Date.now() - started < BAGS_CONFIRM_TIMEOUT_MS) {
+    const statuses = await connection.getSignatureStatuses([signature], {
+      searchTransactionHistory: true,
+    });
+    const status = statuses.value[0];
+    if (status?.err) {
+      throw new Error('Aux tx failed on chain');
+    }
+    if (
+      status?.confirmationStatus === 'processed' ||
+      status?.confirmationStatus === 'confirmed' ||
+      status?.confirmationStatus === 'finalized'
+    ) {
+      return;
+    }
+    await sleep(900);
+  }
+
+  throw new Error('Aux tx confirmation timed out');
+}
+
 async function signAndSendVersionedTxList(
   connection: Connection,
   items: TxWithBlockhash[] | null | undefined,
@@ -198,14 +269,7 @@ async function signAndSendVersionedTxList(
       maxRetries: 3,
       skipPreflight: false,
     });
-    await connection.confirmTransaction(
-      {
-        signature: sig,
-        blockhash: item.blockhash.blockhash,
-        lastValidBlockHeight: item.blockhash.lastValidBlockHeight,
-      },
-      'confirmed',
-    );
+    await confirmLaunchAuxTx(connection, sig, item.blockhash);
   }
 }
 
@@ -290,7 +354,7 @@ async function createTokenInfoAndMetadata(
   if (input.twitter) formData.append('twitter', input.twitter);
   if (input.website) formData.append('website', input.website);
 
-  const response = await fetch(`${BAGS_PROXY_BASE_URL}/token-launch/create-token-info`, {
+  const response = await fetchWithTimeout(`${BAGS_PROXY_BASE_URL}/token-launch/create-token-info`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -346,7 +410,7 @@ async function createLaunchTransaction(
     configKey: string;
   },
 ): Promise<VersionedTransaction> {
-  const response = await fetch(`${BAGS_PROXY_BASE_URL}/token-launch/create-launch-transaction`, {
+  const response = await fetchWithTimeout(`${BAGS_PROXY_BASE_URL}/token-launch/create-launch-transaction`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
