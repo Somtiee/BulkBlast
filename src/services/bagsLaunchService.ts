@@ -79,7 +79,7 @@ export class BagsLaunchServiceError extends Error {
 }
 
 const BAGS_HTTP_TIMEOUT_MS = 20000;
-const BAGS_CONFIRM_TIMEOUT_MS = 25000;
+const BAGS_CONFIRM_TIMEOUT_MS = 12000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -204,30 +204,7 @@ async function confirmLaunchAuxTx(
   signature: string,
   blockhash: { blockhash: string; lastValidBlockHeight: number },
 ): Promise<void> {
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('Aux tx confirmation timeout')), BAGS_CONFIRM_TIMEOUT_MS),
-  );
-
-  try {
-    const confirmation = await Promise.race([
-      connection.confirmTransaction(
-        {
-          signature,
-          blockhash: blockhash.blockhash,
-          lastValidBlockHeight: blockhash.lastValidBlockHeight,
-        },
-        'confirmed',
-      ),
-      timeoutPromise,
-    ]);
-    if (confirmation.value.err) {
-      throw new Error('Aux tx failed on chain');
-    }
-    return;
-  } catch {
-    // fall through to status polling
-  }
-
+  // Fast path first: status polling is often more responsive than confirmTransaction on mobile RPC.
   const started = Date.now();
   while (Date.now() - started < BAGS_CONFIRM_TIMEOUT_MS) {
     const statuses = await connection.getSignatureStatuses([signature], {
@@ -247,7 +224,21 @@ async function confirmLaunchAuxTx(
     await sleep(900);
   }
 
-  throw new Error('Aux tx confirmation timed out');
+  // Last chance: short bounded confirm call before giving up.
+  const confirmation = await Promise.race([
+    connection.confirmTransaction(
+      {
+        signature,
+        blockhash: blockhash.blockhash,
+        lastValidBlockHeight: blockhash.lastValidBlockHeight,
+      },
+      'confirmed',
+    ),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Aux tx confirmation timeout')), 4000)),
+  ]);
+  if (confirmation.value.err) {
+    throw new Error('Aux tx failed on chain');
+  }
 }
 
 async function signAndSendVersionedTxList(

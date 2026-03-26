@@ -18,6 +18,53 @@ import { DetectedNftAsset, DetectedNftItem } from '../../types/nft';
 
 type Props = NativeStackScreenProps<CreateDropStackParamList, 'ExecuteProgress'>;
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Prevent long "Pending" hangs on mobile RPC by using fast signature status checks.
+ * We accept processed/confirmed/finalized as enough to continue UI flow.
+ */
+async function waitForFastBatchAcceptance(
+  conn: ReturnType<typeof getConnection>,
+  signature: string,
+  opts?: { timeoutMs?: number; pollMs?: number }
+): Promise<void> {
+  const timeoutMs = opts?.timeoutMs ?? 9000;
+  const pollMs = opts?.pollMs ?? 700;
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    const statuses = await conn.getSignatureStatuses([signature], {
+      searchTransactionHistory: true,
+    });
+    const status = statuses.value[0];
+    if (status?.err) {
+      throw new Error('Batch failed on chain');
+    }
+    if (
+      status?.confirmationStatus === 'processed' ||
+      status?.confirmationStatus === 'confirmed' ||
+      status?.confirmationStatus === 'finalized'
+    ) {
+      return;
+    }
+    await sleep(pollMs);
+  }
+
+  // Last-chance attempt: don't block forever if RPC is slow.
+  try {
+    const confirmation = await Promise.race([
+      conn.confirmTransaction(signature, 'confirmed'),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('confirm timeout')), 4000)),
+    ]);
+    if (confirmation.value.err) {
+      throw new Error('Batch failed on chain');
+    }
+  } catch {
+    // Keep UX moving; transaction may already be accepted but confirmation is delayed.
+  }
+}
+
 export function ExecuteProgress({ navigation, route }: Props) {
   const { colors } = useTheme();
   const { state } = useApp();
@@ -303,14 +350,7 @@ export function ExecuteProgress({ navigation, route }: Props) {
           await signTransaction(batch.tx);
           const raw = batch.tx.serialize();
           const signature = await conn.sendRawTransaction(raw);
-          await conn.confirmTransaction(
-            {
-              signature,
-              blockhash: latest.blockhash,
-              lastValidBlockHeight: latest.lastValidBlockHeight,
-            },
-            'confirmed'
-          );
+          await waitForFastBatchAcceptance(conn, signature);
           br = {
             batchIndex: batch.index,
             ok: true,

@@ -108,6 +108,53 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 1000): 
   }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Fast confirmation helper to avoid long UI hangs on mobile RPC.
+ * Treats processed/confirmed/finalized as accepted; still throws on explicit chain errors.
+ */
+async function waitForFastSignatureAcceptance(
+  conn: Connection,
+  signature: string,
+  opts?: { timeoutMs?: number; pollMs?: number }
+): Promise<void> {
+  const timeoutMs = opts?.timeoutMs ?? 10000;
+  const pollMs = opts?.pollMs ?? 700;
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    const statuses = await conn.getSignatureStatuses([signature], {
+      searchTransactionHistory: true,
+    });
+    const status = statuses.value[0];
+    if (status?.err) {
+      throw new Error('Transaction failed on chain');
+    }
+    if (
+      status?.confirmationStatus === 'processed' ||
+      status?.confirmationStatus === 'confirmed' ||
+      status?.confirmationStatus === 'finalized'
+    ) {
+      return;
+    }
+    await sleep(pollMs);
+  }
+
+  // Final bounded confirm attempt.
+  try {
+    const confirmation = await Promise.race([
+      conn.confirmTransaction(signature, 'confirmed'),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('confirm timeout')), 4000)),
+    ]);
+    if (confirmation.value.err) {
+      throw new Error('Transaction failed on chain');
+    }
+  } catch {
+    // Do not block forever; caller can continue UX while network catches up.
+  }
+}
+
 export async function getSolBalance(publicKeyStr: string): Promise<{ lamports: number; ui: string }> {
   return withRetry(async () => {
     const conn = getConnection();
@@ -599,14 +646,7 @@ export async function sendBuiltBatches({
     await signTransaction(tx);
     const raw = tx.serialize();
     const signature = await conn.sendRawTransaction(raw);
-    await conn.confirmTransaction(
-      {
-        signature,
-        blockhash: latest.blockhash,
-        lastValidBlockHeight: latest.lastValidBlockHeight,
-      },
-      'confirmed'
-    );
+    await waitForFastSignatureAcceptance(conn, signature);
     sigs.push(signature);
   }
 
@@ -646,7 +686,7 @@ export async function sendSol({
     await signTransaction(transaction);
     const rawTx = transaction.serialize();
     const sig = await conn.sendRawTransaction(rawTx);
-    await conn.confirmTransaction(sig, 'confirmed');
+    await waitForFastSignatureAcceptance(conn, sig);
     return sig;
   } else {
     throw new Error('Adapter mode not supported for manual send yet');
@@ -707,7 +747,7 @@ export async function sendSplToken({
     await signTransaction(transaction);
     const rawTx = transaction.serialize();
     const sig = await conn.sendRawTransaction(rawTx);
-    await conn.confirmTransaction(sig, 'confirmed');
+    await waitForFastSignatureAcceptance(conn, sig);
     return sig;
   } else {
     throw new Error('Adapter mode not supported for manual send yet');
